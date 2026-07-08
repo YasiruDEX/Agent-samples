@@ -10,7 +10,7 @@ checkpointer keyed on `thread_id` (= session_id from the API request).
 """
 
 import logging
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableLambda
@@ -71,20 +71,20 @@ class Assistant:
         self.runnable = runnable
 
     def __call__(self, state: State, config: RunnableConfig) -> dict:
-        # Prepend system message to the messages list
+        # Prepend system message to the messages list.
+        # Pass the list directly — the runnable is a plain LLM (llm.bind_tools),
+        # NOT a ChatPromptTemplate chain, so it expects BaseMessages, not a dict.
         messages_with_system = [SystemMessage(content=SYSTEM_PROMPT)] + list(state["messages"])
 
         while True:
-            result = self.runnable.invoke(
-                {"messages": messages_with_system}, config
-            )
+            result = self.runnable.invoke(messages_with_system, config)
             # Re-prompt if the LLM returns an empty response
             if not result.tool_calls and (
                 not result.content
                 or (isinstance(result.content, list) and not result.content[0].get("text"))
             ):
                 messages_with_system = messages_with_system + [
-                    ("user", "Respond with a real output.")
+                    HumanMessage(content="Respond with a real output.")
                 ]
             else:
                 break
