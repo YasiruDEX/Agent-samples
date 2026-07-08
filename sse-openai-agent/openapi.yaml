@@ -1,28 +1,89 @@
 openapi: 3.0.3
 info:
-  title: SSE OpenAI Chatbot Agent
+  title: ShopFlow SSE Customer Support Agent
   description: |
-    A custom API agent powered by OpenAI with SSE streaming support.
-  version: 1.0.0
+    Production-ready LangGraph + OpenAI agent with SSE streaming, tool calling,
+    per-session conversational memory, and business guardrails.
+
+    ## SSE Event Protocol
+
+    The `/chat` endpoint streams **Server-Sent Events (SSE)**. Each event has a
+    typed `event` field:
+
+    | Event type      | Payload example                                              |
+    |-----------------|--------------------------------------------------------------|
+    | `message`       | `{"content": "<token>"}`                                    |
+    | `tool_use`      | `{"tool": "track_order", "input": {"order_id": "12345"}}`   |
+    | `tool_result`   | `{"tool": "track_order", "output": "{\"status\":\"Shipped\"}"}`|
+    | `human_handoff` | `{"reason": "User requested human agent"}`                  |
+    | `error`         | `{"error": "<message>"}`                                    |
+    | `done`          | `[DONE]`                                                    |
+  version: 2.0.0
+
 servers:
   - url: http://localhost:9099
+
 paths:
   /chat:
     post:
-      summary: Chat with the agent using SSE streaming
+      summary: Chat with the ShopFlow support agent via SSE streaming
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/ChatRequest"
+            examples:
+              track_order:
+                summary: Track an order
+                value:
+                  session_id: "user-abc-123"
+                  message: "Where is my order 12301?"
+              refund_request:
+                summary: Request a refund
+                value:
+                  session_id: "user-abc-123"
+                  message: "I want a refund for order 12301 because it arrived damaged."
+              human_handoff:
+                summary: Trigger human handoff
+                value:
+                  session_id: "user-abc-123"
+                  message: "This is unacceptable! Let me speak to a supervisor right now!"
       responses:
         '200':
-          description: Successful stream response
+          description: SSE stream of agent events
           content:
             text/event-stream:
               schema:
                 type: string
+                description: |
+                  A stream of Server-Sent Events. Each event follows the SSE protocol:
+                    event: <type>\ndata: <json-payload>\n\n
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  agent:
+                    type: string
+                    example: ShopFlow SSE Customer Support
+
 components:
   schemas:
     ChatRequest:
@@ -33,5 +94,22 @@ components:
       properties:
         session_id:
           type: string
+          description: |
+            Unique identifier for the user's session. Used to isolate conversational
+            memory across different users. Re-use the same session_id to maintain
+            conversation history within a session.
+          example: "user-abc-123"
         message:
+          type: string
+          description: The user's message to the support agent.
+          example: "Where is my order 12301?"
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        detail:
+          type: string
+        traceback:
           type: string
