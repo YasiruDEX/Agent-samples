@@ -32,33 +32,24 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
-import base64
-import json
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "fallback_local_secret_key")
+JWT_ALGORITHM = "HS256"
 
 async def verify_jwt(token: str = Depends(oauth2_scheme)):
     """
     Verify the JWT token provided in the Authorization header.
-    To be compatible with any token signature algorithm (RS256, HS256, etc.) and dummy 
-    signatures used during testing, we decode the payload using base64 without strict signature verification.
+    Validates the cryptographic signature and checks for expiration.
     """
     try:
-        # Split JWT to get the payload (second part)
-        parts = token.split('.')
-        if len(parts) < 2:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid JWT token format",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        payload_b64 = parts[1]
-        # Add padding to base64 string if necessary
-        payload_b64 += '=' * (-len(payload_b64) % 4)
-        
-        # Decode base64url payload
-        decoded_payload = base64.urlsafe_b64decode(payload_b64).decode('utf-8')
-        return json.loads(decoded_payload)
-    except Exception:
+        decoded_payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        return decoded_payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
