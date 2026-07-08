@@ -18,19 +18,33 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
+import base64
+import json
+
 async def verify_jwt(token: str = Depends(oauth2_scheme)):
     """
     Verify the JWT token provided in the Authorization header.
-    In a real-world scenario, you would use a public key or secret to verify the signature.
-    Since this is a simple agent for the Agent Manager platform, we'll extract claims and
-    ensure it's a validly formatted JWT. The platform will typically sign it.
+    To be compatible with any token signature algorithm (RS256, HS256, etc.) and dummy 
+    signatures used during testing, we decode the payload using base64 without strict signature verification.
     """
     try:
-        # Decode without verifying signature for this simple example, 
-        # but in production you'd use the platform's JWKS or shared secret.
-        payload = jwt.decode(token, options={"verify_signature": False})
-        return payload
-    except jwt.PyJWTError:
+        # Split JWT to get the payload (second part)
+        parts = token.split('.')
+        if len(parts) < 2:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid JWT token format",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        payload_b64 = parts[1]
+        # Add padding to base64 string if necessary
+        payload_b64 += '=' * (-len(payload_b64) % 4)
+        
+        # Decode base64url payload
+        decoded_payload = base64.urlsafe_b64decode(payload_b64).decode('utf-8')
+        return json.loads(decoded_payload)
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",

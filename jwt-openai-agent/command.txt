@@ -1,0 +1,13 @@
+# Run the following commands in your terminal to start the agent locally
+
+# 1. Navigate to the agent directory
+cd /Users/yasirubasnayake/Documents/WSO2/Agent-samples/jwt-openai-agent
+
+# 2. Install the required Python packages
+pip install -r requirements.txt
+
+# 3. Set your OpenAI API key (replace 'your-openai-api-key' with your actual key)
+export OPENAI_API_KEY="your-openai-api-key"
+
+# 4. Start the FastAPI application
+python main.py
