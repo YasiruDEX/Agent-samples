@@ -6,7 +6,21 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
+import traceback
+from fastapi.responses import JSONResponse
+
 app = FastAPI(title="JWT OpenAI Chatbot Agent")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "message": "Internal Server Error",
+            "detail": str(exc),
+            "traceback": "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        }
+    )
 
 # OAuth2 scheme for extracting the Bearer token from the Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
