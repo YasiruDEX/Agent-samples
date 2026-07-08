@@ -1,0 +1,53 @@
+openapi: 3.0.3
+info:
+  title: JWT OpenAI Chatbot Agent
+  description: |
+    A simple custom API agent powered by OpenAI with JWT OAuth 2.0 support.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /chat:
+    post:
+      summary: Chat with the agent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        '401':
+          description: Unauthorized
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - session_id
+        - message
+      properties:
+        session_id:
+          type: string
+        message:
+          type: string
+    ChatResponse:
+      type: object
+      required:
+        - response
+      properties:
+        response:
+          type: string

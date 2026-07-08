@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: Customer Support Agent Service
+  description: |
+    A FastAPI service that provides a customer support agent powered by LangGraph.
+    The agent can help with flight status, bookings, and other travel-related inquiries.
+  version: 1.0.0
+  contact:
+    name: API Support
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /chat:
+    post:
+      summary: Chat with the customer support agent
+      description: |
+        Sends a message to the customer support agent and receives a response.
+        The agent maintains conversation state using the session_id.
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            examples:
+              flightStatus:
+                summary: Check flight status
+                value:
+                  session_id: "session_123"
+                  message: "What is my flight status?"
+              bookingQuery:
+                summary: Check booking details
+                value:
+                  session_id: "session_124"
+                  message: "Can you show me my hotel reservation?"
+              generalInquiry:
+                summary: General travel inquiry
+                value:
+                  session_id: "session_125"
+                  message: "What rental cars are available at my destination?"
+      responses:
+        '200':
+          description: Successful response from the agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+              examples:
+                flightStatusResponse:
+                  summary: Flight status response
+                  value:
+                    response: "Your flight UA1234 is scheduled to depart at 3:30 PM and is currently on time."
+                bookingResponse:
+                  summary: Booking details response
+                  value:
+                    response: "I found your hotel reservation at Grand Plaza Hotel for 3 nights starting December 20th."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "An error occurred while processing your request"
+components:
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - session_id
+        - message
+      properties:
+        session_id:
+          type: string
+          description: Unique identifier for the conversation session
+        message:
+          type: string
+          description: Customer's message or query
+    ChatResponse:
+      type: object
+      required:
+        - response
+      properties:
+        response:
+          type: string
+          description: Agent's response to the customer's message
