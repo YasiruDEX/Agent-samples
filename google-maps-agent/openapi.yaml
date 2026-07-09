@@ -1,0 +1,55 @@
+openapi: 3.0.3
+info:
+  title: Google Maps OpenAI MCP Agent
+  version: 1.0.0
+servers:
+  - url: http://localhost:9099
+paths:
+  /chat:
+    post:
+      summary: Chat with the Google Maps agent
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - message
+              properties:
+                session_id:
+                  type: string
+                message:
+                  type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - response
+                properties:
+                  response:
+                    type: string
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  agent:
+                    type: string
+                  mcp_url:
+                    type: string
