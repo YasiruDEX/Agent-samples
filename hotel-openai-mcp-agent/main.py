@@ -19,8 +19,6 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
-from mcp.client import Client
-from mcp.client.streamable_http import streamable_http_client
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
@@ -99,38 +97,149 @@ def _mcp_url() -> str:
 
 
 def _mcp_headers() -> dict[str, str]:
+    headers = {
+        "Accept": os.getenv(
+            "HOTEL_MCP_ACCEPT",
+            "application/json, text/event-stream",
+        ).strip()
+        or "application/json, text/event-stream",
+    }
+
     api_key = os.getenv("HOTEL_MCP_API_KEY", "").strip()
     if not api_key:
-        return {}
+        return headers
 
     header_name = os.getenv("HOTEL_MCP_AUTH_HEADER", "x-api-key").strip() or "x-api-key"
     auth_prefix = os.getenv("HOTEL_MCP_AUTH_PREFIX", "").strip()
 
     if auth_prefix:
-        return {header_name: f"{auth_prefix} {api_key}".strip()}
-    return {header_name: api_key}
+        headers[header_name] = f"{auth_prefix} {api_key}".strip()
+    else:
+        headers[header_name] = api_key
+    return headers
+
+
+def _extract_jsonrpc_message(body: str) -> dict[str, Any]:
+    body = body.strip()
+    if not body:
+        raise ValueError("Empty MCP response body.")
+
+    if body.startswith("{"):
+        return json.loads(body)
+
+    for block in body.split("\n\n"):
+        data_lines: list[str] = []
+        for line in block.splitlines():
+            if line.startswith("data:"):
+                data_lines.append(line[5:].lstrip())
+        if data_lines:
+            return json.loads("\n".join(data_lines))
+
+    raise ValueError(f"Unable to parse MCP response body: {body[:200]}")
+
+
+class HotelMCPClient:
+    def __init__(self, url: str, headers: dict[str, str]) -> None:
+        self._url = url
+        self._headers = headers
+        self._http_client = httpx.AsyncClient(headers=headers, timeout=httpx.Timeout(30.0, connect=10.0), follow_redirects=True)
+        self._session_id: str | None = None
+        self.instructions: str | None = None
+        self.server_info: dict[str, Any] | None = None
+        self._request_id = 0
+
+    async def __aenter__(self) -> "HotelMCPClient":
+        await self._initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self._http_client.aclose()
+
+    def _next_request_id(self) -> int:
+        self._request_id += 1
+        return self._request_id
+
+    def _session_headers(self) -> dict[str, str]:
+        headers = dict(self._headers)
+        if self._session_id:
+            headers["mcp-session-id"] = self._session_id
+        return headers
+
+    async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
+        response = await self._http_client.post(self._url, headers=self._session_headers(), json=payload)
+        response.raise_for_status()
+        body = (await response.aread()).decode(response.encoding or "utf-8", errors="replace")
+        message = _extract_jsonrpc_message(body)
+        if message.get("error"):
+            raise RuntimeError(message["error"])
+        return message
+
+    async def _initialize(self) -> None:
+        response = await self._http_client.post(
+            self._url,
+            headers=self._headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": self._next_request_id(),
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "hotel-openai-mcp-agent", "version": "1.0.0"},
+                },
+            },
+        )
+        response.raise_for_status()
+        self._session_id = response.headers.get("mcp-session-id")
+        body = (await response.aread()).decode(response.encoding or "utf-8", errors="replace")
+        message = _extract_jsonrpc_message(body)
+        result = message.get("result") or {}
+        self.instructions = result.get("instructions")
+        self.server_info = result.get("serverInfo")
+
+    async def list_tools(self) -> dict[str, Any]:
+        message = await self._post(
+            {
+                "jsonrpc": "2.0",
+                "id": self._next_request_id(),
+                "method": "tools/list",
+                "params": {},
+            }
+        )
+        return message.get("result") or {}
+
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        message = await self._post(
+            {
+                "jsonrpc": "2.0",
+                "id": self._next_request_id(),
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            }
+        )
+        return message.get("result") or {}
 
 
 @asynccontextmanager
 async def hotel_mcp_client():
-    headers = _mcp_headers()
-    timeout = httpx.Timeout(30.0, connect=10.0)
-    async with httpx.AsyncClient(headers=headers, timeout=timeout) as http_client:
-        async with streamable_http_client(_mcp_url(), http_client=http_client) as transport:
-            async with Client(transport) as client:
-                yield client
+    client = HotelMCPClient(_mcp_url(), _mcp_headers())
+    async with client as session:
+        yield session
 
 
 def _tool_definitions(tools: list[Any]) -> list[dict[str, Any]]:
     definitions: list[dict[str, Any]] = []
     for tool in tools:
+        tool_name = tool.get("name", "unknown") if isinstance(tool, dict) else getattr(tool, "name", "unknown")
+        description = tool.get("description") if isinstance(tool, dict) else getattr(tool, "description", None)
+        input_schema = tool.get("inputSchema") if isinstance(tool, dict) else getattr(tool, "input_schema", None)
         definitions.append(
             {
                 "type": "function",
                 "function": {
-                    "name": tool.name,
-                    "description": tool.description or f"MCP tool {tool.name}",
-                    "parameters": tool.input_schema,
+                    "name": tool_name,
+                    "description": description or f"MCP tool {tool_name}",
+                    "parameters": input_schema or {"type": "object", "properties": {}},
                 },
             }
         )
@@ -155,8 +264,8 @@ async def _run_chat_loop(message: str) -> str:
 
     async with hotel_mcp_client() as mcp_client:
         tools_result = await mcp_client.list_tools()
-        tool_definitions = _tool_definitions(list(tools_result.tools or []))
-        server_instructions = getattr(mcp_client, "instructions", None)
+        tool_definitions = _tool_definitions(list(tools_result.get("tools") or []))
+        server_instructions = mcp_client.instructions
 
         system_prompt = (
             "You are a hotel assistant. Use the available MCP tools for hotel "
