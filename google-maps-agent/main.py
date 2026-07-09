@@ -109,7 +109,7 @@ def _mcp_server_configs() -> dict[str, dict[str, Any]]:
             "url": url,
             "transport": "streamable_http",
             "headers": {
-                "X-API-Key": mcp_api_key,
+                "X-Goog-Api-Key": mcp_api_key,
             },
         }
         for i, url in enumerate(mcp_server_urls)
