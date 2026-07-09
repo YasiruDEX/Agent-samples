@@ -127,8 +127,7 @@ def _mcp_server_configs() -> dict[str, dict[str, Any]]:
             "url": url,
             "transport": "streamable_http",
             "headers": {
-                "API-Key": mcp_api_key,
-                "Authorization": "",
+                "X-API-Key": mcp_api_key,
             },
         }
         for i, url in enumerate(mcp_server_urls)
@@ -188,11 +187,6 @@ async def _run_chat_loop(message: str) -> str:
             detail="AGENT_MCP_1_URL and AGENT_MCP_1_API_KEY environment variables must be set.",
         )
 
-    mcp_client = MultiServerMCPClient(server_configs)
-    tools = await mcp_client.get_tools()
-    tool_definitions = _tool_definitions(list(tools))
-    tool_lookup = {tool.name: tool for tool in tools}
-
     system_prompt = (
         "You are a Google Maps assistant. Use the available MCP tools for "
         "places, weather, routes, and related map lookups. Do not invent map "
@@ -200,76 +194,85 @@ async def _run_chat_loop(message: str) -> str:
         "follow-up question."
     )
 
-    messages: list[dict[str, Any]] = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": message},
-    ]
+    async with MultiServerMCPClient(server_configs) as mcp_client:
+        tools = await mcp_client.get_tools()
+        tool_definitions = _tool_definitions(list(tools))
+        tool_lookup = {tool.name: tool for tool in tools}
 
-    for _ in range(MAX_TOOL_ROUNDS):
-        completion = await openai_client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=messages,
-            tools=tool_definitions,
-            tool_choice="auto",
-        )
-        choice = completion.choices[0]
-        assistant_message = choice.message
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": message},
+        ]
 
-        if assistant_message.tool_calls:
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": assistant_message.content,
-                    "tool_calls": [
-                        {
-                            "id": tool_call.id,
-                            "type": "function",
-                            "function": {
-                                "name": tool_call.function.name,
-                                "arguments": tool_call.function.arguments,
-                            },
-                        }
-                        for tool_call in assistant_message.tool_calls
-                    ],
-                }
+        for _ in range(MAX_TOOL_ROUNDS):
+            completion = await openai_client.chat.completions.create(
+                model=DEFAULT_MODEL,
+                messages=messages,
+                tools=tool_definitions,
+                tool_choice="auto",
             )
+            choice = completion.choices[0]
+            assistant_message = choice.message
 
-            for tool_call in assistant_message.tool_calls:
-                arguments_text = tool_call.function.arguments or "{}"
-                try:
-                    arguments = json.loads(arguments_text)
-                except json.JSONDecodeError:
-                    arguments = {"_raw_arguments": arguments_text}
-
-                logger.info("OpenAI requested tool %s with %s", tool_call.function.name, arguments)
-                tool = tool_lookup.get(tool_call.function.name)
-                if tool is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Unknown MCP tool requested: {tool_call.function.name}",
-                    )
-
-                if hasattr(tool, "ainvoke"):
-                    tool_result = await tool.ainvoke(arguments)
-                else:
-                    tool_result = tool.invoke(arguments)
-
+            if assistant_message.tool_calls:
                 messages.append(
                     {
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": _stringify_tool_result(tool_result),
+                        "role": "assistant",
+                        "content": assistant_message.content,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in assistant_message.tool_calls
+                        ],
                     }
                 )
-            continue
 
-        content = assistant_message.content or ""
-        return content.strip() or "I could not produce a response."
+                for tool_call in assistant_message.tool_calls:
+                    arguments_text = tool_call.function.arguments or "{}"
+                    try:
+                        arguments = json.loads(arguments_text)
+                    except json.JSONDecodeError:
+                        arguments = {"_raw_arguments": arguments_text}
 
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="The agent reached the maximum number of tool rounds.",
-    )
+                    logger.info(
+                        "OpenAI requested tool %s with %s",
+                        tool_call.function.name,
+                        arguments,
+                    )
+                    tool = tool_lookup.get(tool_call.function.name)
+                    if tool is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Unknown MCP tool requested: {tool_call.function.name}",
+                        )
+
+                    if hasattr(tool, "ainvoke"):
+                        tool_result = await tool.ainvoke(arguments)
+                    else:
+                        tool_result = tool.invoke(arguments)
+
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": _stringify_tool_result(tool_result),
+                        }
+                    )
+                continue
+
+            content = assistant_message.content or ""
+            return content.strip() or "I could not produce a response."
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The agent reached the maximum number of tool rounds.",
+        )
 
 
 # ---------------------------------------------------------------------------
