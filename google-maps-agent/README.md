@@ -1,23 +1,18 @@
-# Hotel OpenAI MCP Agent
+# Google Maps OpenAI MCP Agent
 
-A FastAPI-based chat agent that uses OpenAI for reasoning and the hotel registry MCP server for hotel operations.
+A FastAPI-based chat agent that uses OpenAI for reasoning and a Google Maps MCP server for map operations.
 
 ## What it does
 
-The agent connects to the remote hotel MCP server at:
+The agent connects to one or more remote Google Maps MCP servers via:
 
-`http://default-default.gateway.localhost:19080/default/hotel-registry/mcp`
+`AGENT_MCP_1_URL`
 
-It loads the hotel tools from the MCP server at runtime and lets OpenAI decide when to call them.
+It loads the available map tools at runtime and lets OpenAI decide when to call them.
 
 ## Tools exposed by the MCP server
 
-- `list_hotels`
-- `get_hotel`
-- `register_hotel`
-- `update_hotel`
-- `rename_hotel`
-- `delete_hotel`
+The MCP server exposes five Google Maps tools covering places, weather, routes, and related lookups.
 
 ## Setup
 
@@ -31,22 +26,18 @@ pip install -r requirements.txt
 
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
-export HOTEL_MCP_API_KEY="your-mcp-api-key"
-```
-
-If the gateway expects a different header name, override it:
-
-```bash
-export HOTEL_MCP_AUTH_HEADER="x-api-key"
-export HOTEL_MCP_AUTH_PREFIX=""
+export AGENT_MCP_1_URL="http://your-mcp-server/mcp"
+export AGENT_MCP_1_API_KEY="your-mcp-api-key"
 ```
 
 Optional overrides:
 
 ```bash
-export HOTEL_MCP_URL="http://default-default.gateway.localhost:19080/default/hotel-registry/mcp"
 export OPENAI_MODEL="gpt-4o-mini"
+export MAX_TOOL_ROUNDS="6"
 ```
+
+If you want to point at multiple MCP servers, set `AGENT_MCP_1_URL` to a comma-separated list of URLs.
 
 3. Run the agent:
 
@@ -67,5 +58,5 @@ The server runs on `http://0.0.0.0:9099`.
 ```bash
 curl -X POST http://localhost:9099/chat \
   -H 'Content-Type: application/json' \
-  -d '{"session_id":"s1","message":"Find hotels in Paris under $300"}'
+  -d '{"session_id":"s1","message":"Find places in Paris near the Eiffel Tower and summarize them"}'
 ```
