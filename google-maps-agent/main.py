@@ -180,7 +180,7 @@ async def _run_chat_loop(message: str) -> str:
 
     # Use first MCP URL (extend here if multi-server support is needed)
     mcp_url = mcp_urls[0]
-    mcp_headers = {"X-API-Key": mcp_key}
+    mcp_headers = {"X-Goog-Api-Key": mcp_key}
 
     async with streamablehttp_client(mcp_url, headers=mcp_headers) as (read, write, _):
         async with ClientSession(read, write) as session:
