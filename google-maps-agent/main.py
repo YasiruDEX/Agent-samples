@@ -19,6 +19,13 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+import mcp.client.streamable_http as mcp_streamable_http
+
+if not hasattr(mcp_streamable_http, "streamable_http_client") and hasattr(
+    mcp_streamable_http, "streamablehttp_client"
+):
+    mcp_streamable_http.streamable_http_client = mcp_streamable_http.streamablehttp_client
+
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 load_dotenv()
