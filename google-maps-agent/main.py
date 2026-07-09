@@ -26,6 +26,17 @@ if not hasattr(mcp_streamable_http, "streamable_http_client") and hasattr(
 ):
     mcp_streamable_http.streamable_http_client = mcp_streamable_http.streamablehttp_client
 
+if hasattr(mcp_streamable_http, "streamable_http_client"):
+    _original_streamable_http_client = mcp_streamable_http.streamable_http_client
+
+    def _streamable_http_client_compat(url: str, **kwargs: Any):
+        http_client = kwargs.pop("http_client", None)
+        if http_client is not None:
+            kwargs["httpx_client_factory"] = lambda **_factory_kwargs: http_client
+        return _original_streamable_http_client(url, **kwargs)
+
+    mcp_streamable_http.streamable_http_client = _streamable_http_client_compat
+
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 load_dotenv()
