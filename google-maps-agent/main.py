@@ -3,6 +3,9 @@ Google Maps OpenAI MCP Agent
 ============================
 A FastAPI chat agent that uses OpenAI for reasoning and a Google Maps MCP
 server for map-related tools.
+
+Uses the MCP SDK directly (no langchain-mcp-adapters) to avoid OTel/httpx
+compatibility issues with streamablehttp_client.
 """
 
 from __future__ import annotations
@@ -17,9 +20,10 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
+from mcp.client.session import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
 from openai import AsyncOpenAI
 from pydantic import BaseModel
-from langchain_mcp_adapters.client import MultiServerMCPClient
 
 load_dotenv()
 
@@ -97,77 +101,70 @@ def _mcp_server_urls() -> list[str]:
     return [url.strip() for url in raw_urls.split(",") if url.strip()]
 
 
-def _mcp_server_configs() -> dict[str, dict[str, Any]]:
-    mcp_server_urls = _mcp_server_urls()
-    mcp_api_key = os.environ.get("AGENT_MCP_1_API_KEY", "").strip()
-
-    if not mcp_server_urls or not mcp_api_key:
-        return {}
-
-    return {
-        f"mcp_server_{i}": {
-            "url": url,
-            "transport": "streamable_http",
-            "headers": {
-                "X-API-Key": mcp_api_key,
-            },
-        }
-        for i, url in enumerate(mcp_server_urls)
-    }
+def _mcp_api_key() -> str:
+    return os.environ.get("AGENT_MCP_1_API_KEY", "").strip()
 
 
-def _schema_from_tool(tool: Any) -> dict[str, Any]:
-    schema = getattr(tool, "tool_call_schema", None) or getattr(tool, "args_schema", None) or getattr(tool, "input_schema", None)
-    if isinstance(schema, dict):
-        return schema
-    if schema is not None and hasattr(schema, "model_json_schema"):
-        return schema.model_json_schema()
-    if schema is not None and hasattr(schema, "schema"):
-        return schema.schema()
-    return {"type": "object", "properties": {}}
-
-
-def _tool_definitions(tools: list[Any]) -> list[dict[str, Any]]:
-    definitions: list[dict[str, Any]] = []
+def _tool_definitions_from_mcp(tools: list[Any]) -> list[dict[str, Any]]:
+    """Convert MCP Tool objects to OpenAI function definitions."""
+    definitions = []
     for tool in tools:
-        tool_name = getattr(tool, "name", "unknown")
-        description = getattr(tool, "description", None)
-        input_schema = _schema_from_tool(tool)
+        # inputSchema is a dict on mcp.types.Tool
+        schema = tool.inputSchema if isinstance(tool.inputSchema, dict) else {}
         definitions.append(
             {
                 "type": "function",
                 "function": {
-                    "name": tool_name,
-                    "description": description or f"MCP tool {tool_name}",
-                    "parameters": input_schema,
+                    "name": tool.name,
+                    "description": tool.description or f"MCP tool {tool.name}",
+                    "parameters": schema,
                 },
             }
         )
     return definitions
 
 
-def _stringify_tool_result(result: Any) -> str:
-    if hasattr(result, "model_dump"):
-        return json.dumps(result.model_dump(mode="json", exclude_none=True), ensure_ascii=False)
-    return json.dumps(result, ensure_ascii=False, default=str)
+def _stringify_mcp_result(result: Any) -> str:
+    """Serialize an MCP CallToolResult to a string for the OpenAI messages."""
+    if result is None:
+        return ""
+    # result.content is a list of TextContent / ImageContent / etc.
+    content = getattr(result, "content", None)
+    if content is None:
+        return str(result)
+    parts: list[str] = []
+    for item in content:
+        if hasattr(item, "text"):
+            parts.append(item.text)
+        elif hasattr(item, "model_dump"):
+            parts.append(json.dumps(item.model_dump(mode="json", exclude_none=True), ensure_ascii=False))
+        else:
+            parts.append(str(item))
+    return "\n".join(parts) if parts else ""
+
+
+# ---------------------------------------------------------------------------
+# Core chat loop
+# ---------------------------------------------------------------------------
 
 
 async def _run_chat_loop(message: str) -> str:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OPENAI_API_KEY environment variable is not set.",
         )
 
-    openai_client = AsyncOpenAI(api_key=api_key)
-
-    server_configs = _mcp_server_configs()
-    if not server_configs:
+    mcp_urls = _mcp_server_urls()
+    mcp_key = _mcp_api_key()
+    if not mcp_urls or not mcp_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AGENT_MCP_1_URL and AGENT_MCP_1_API_KEY environment variables must be set.",
         )
+
+    openai_client = AsyncOpenAI(api_key=openai_api_key)
 
     system_prompt = (
         "You are a Google Maps assistant. Use the available MCP tools for "
@@ -176,80 +173,84 @@ async def _run_chat_loop(message: str) -> str:
         "follow-up question."
     )
 
-    mcp_client = MultiServerMCPClient(server_configs)
-    tools = await mcp_client.get_tools()
-    tool_definitions = _tool_definitions(list(tools))
-    tool_lookup = {tool.name: tool for tool in tools}
-
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": message},
     ]
 
-    for _ in range(MAX_TOOL_ROUNDS):
-        completion = await openai_client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=messages,
-            tools=tool_definitions,
-            tool_choice="auto",
-        )
-        choice = completion.choices[0]
-        assistant_message = choice.message
+    # Use first MCP URL (extend here if multi-server support is needed)
+    mcp_url = mcp_urls[0]
+    mcp_headers = {"X-API-Key": mcp_key}
 
-        if assistant_message.tool_calls:
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": assistant_message.content,
-                    "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function.name,
-                                "arguments": tc.function.arguments,
-                            },
-                        }
-                        for tc in assistant_message.tool_calls
-                    ],
-                }
-            )
+    async with streamablehttp_client(mcp_url, headers=mcp_headers) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
 
-            for tool_call in assistant_message.tool_calls:
-                arguments_text = tool_call.function.arguments or "{}"
-                try:
-                    arguments = json.loads(arguments_text)
-                except json.JSONDecodeError:
-                    arguments = {"_raw_arguments": arguments_text}
+            list_result = await session.list_tools()
+            mcp_tools = list_result.tools
+            tool_definitions = _tool_definitions_from_mcp(mcp_tools)
+            tool_names = {t.name for t in mcp_tools}
 
-                logger.info(
-                    "OpenAI requested tool %s with %s",
-                    tool_call.function.name,
-                    arguments,
+            logger.info("Loaded %d MCP tools from %s", len(mcp_tools), mcp_url)
+
+            for _ in range(MAX_TOOL_ROUNDS):
+                completion = await openai_client.chat.completions.create(
+                    model=DEFAULT_MODEL,
+                    messages=messages,
+                    tools=tool_definitions,
+                    tool_choice="auto",
                 )
-                tool = tool_lookup.get(tool_call.function.name)
-                if tool is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Unknown MCP tool requested: {tool_call.function.name}",
+                choice = completion.choices[0]
+                assistant_message = choice.message
+
+                if assistant_message.tool_calls:
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": assistant_message.content,
+                            "tool_calls": [
+                                {
+                                    "id": tc.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": tc.function.name,
+                                        "arguments": tc.function.arguments,
+                                    },
+                                }
+                                for tc in assistant_message.tool_calls
+                            ],
+                        }
                     )
 
-                if hasattr(tool, "ainvoke"):
-                    tool_result = await tool.ainvoke(arguments)
-                else:
-                    tool_result = tool.invoke(arguments)
+                    for tool_call in assistant_message.tool_calls:
+                        tool_name = tool_call.function.name
+                        arguments_text = tool_call.function.arguments or "{}"
 
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": _stringify_tool_result(tool_result),
-                    }
-                )
-            continue
+                        try:
+                            arguments = json.loads(arguments_text)
+                        except json.JSONDecodeError:
+                            arguments = {}
 
-        content = assistant_message.content or ""
-        return content.strip() or "I could not produce a response."
+                        if tool_name not in tool_names:
+                            raise HTTPException(
+                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail=f"Unknown MCP tool requested: {tool_name}",
+                            )
+
+                        logger.info("Calling MCP tool %s with %s", tool_name, arguments)
+                        tool_result = await session.call_tool(tool_name, arguments)
+
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "content": _stringify_mcp_result(tool_result),
+                            }
+                        )
+                    continue
+
+                content = assistant_message.content or ""
+                return content.strip() or "I could not produce a response."
 
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
