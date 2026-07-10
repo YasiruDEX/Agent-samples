@@ -1,8 +1,13 @@
+import { r as __esmMin } from "../../__23tanstack-start-server-fn-resolver-BaOM1vmh.mjs";
 import { A as rootRouteId, C as getStylesheetHref, M as createLRUCache, N as invariant, P as decodePath, b as createInlineCssPlaceholderAsset, v as GLOBAL_TSR, x as createInlineCssStyleAsset, y as TSR_SCRIPT_BARRIER_ID } from "./react-router+[...].mjs";
 //#region node_modules/unenv/dist/runtime/polyfill/globalthis.mjs
-var globalthis_default = globalThis;
+var globalthis_default;
+var init_globalthis = __esmMin((() => {
+	globalthis_default = globalThis;
+}));
 //#endregion
 //#region node_modules/seroval/dist/esm/production/index.mjs
+init_globalthis();
 var M$1 = ((i) => (i[i.AggregateError = 1] = "AggregateError", i[i.ArrowFunction = 2] = "ArrowFunction", i[i.ErrorPrototypeStack = 4] = "ErrorPrototypeStack", i[i.ObjectAssign = 8] = "ObjectAssign", i[i.BigIntTypedArray = 16] = "BigIntTypedArray", i[i.RegExp = 32] = "RegExp", i))(M$1 || {});
 var v$1 = Symbol.asyncIterator;
 var dr = Symbol.hasInstance;
@@ -3013,4 +3018,4 @@ function getNormalizedURL(url, base) {
 	};
 }
 //#endregion
-export { defaultSerovalPlugins as a, makeSerovalPlugin as c, lu as d, mergeHeaders as i, Ou as l, getNormalizedURL as n, createRawStreamRPCPlugin as o, getOrigin as r, createSerializationAdapter as s, attachRouterServerSsrUtils as t, cu as u };
+export { defaultSerovalPlugins as a, makeSerovalPlugin as c, lu as d, globalthis_default as f, mergeHeaders as i, Ou as l, getNormalizedURL as n, createRawStreamRPCPlugin as o, init_globalthis as p, getOrigin as r, createSerializationAdapter as s, attachRouterServerSsrUtils as t, cu as u };

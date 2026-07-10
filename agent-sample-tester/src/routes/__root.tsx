@@ -7,13 +7,13 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import appCss from "../styles.css?url";
 import { SettingsProvider } from "../lib/settings-context";
 import { AppShell } from "../components/app-shell";
 import { SplashScreen } from "../components/splash-screen";
-import { useState } from "react";
+import { OxygenUIThemeProvider } from "@wso2/oxygen-ui";
 
 function NotFoundComponent() {
   return (
@@ -133,9 +133,11 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <SettingsProvider>
-        <SplashGate>
-          <AppShell />
-        </SplashGate>
+        <OxygenUIThemeProvider>
+          <SplashGate>
+            <AppShell />
+          </SplashGate>
+        </OxygenUIThemeProvider>
       </SettingsProvider>
     </QueryClientProvider>
   );

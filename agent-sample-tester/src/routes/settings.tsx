@@ -1,7 +1,18 @@
 import { useSettings } from "@/lib/settings-context";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, RotateCcw } from "lucide-react";
+import { Check, RotateCcw } from "@wso2/oxygen-ui-icons-react";
 import { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  TextField,
+  Typography,
+  Stack,
+  Alert,
+} from "@wso2/oxygen-ui";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -77,145 +88,149 @@ function SettingsPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-10 md:px-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <Box sx={{ height: "100%", overflowY: "auto", py: 4 }}>
+      <Container maxWidth="md">
+        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+          Settings
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
           Override the agent endpoint, API key, and request header name. Values are saved to the
           local .env file and take precedence over any runtime defaults.
-        </p>
+        </Typography>
 
-        <form onSubmit={save} className="mt-8 space-y-6 rounded-2xl border border-border bg-card p-6">
-          <Field
-            label="Agent URL"
-            hint={`Default: ${defaults.apiUrl}`}
-            id="api-url"
-            value={url}
-            onChange={setUrl}
-            placeholder="https://your-agent.example.com/v1/chat"
-          />
-          <Field
-            label="API Key"
-            hint="Sent using the request header name below. If the header is Authorization, it becomes 'Bearer <key>'."
-            id="api-key"
-            value={key}
-            onChange={setKey}
-            placeholder="sk-..."
-            type="password"
-          />
-          <Field
-            label="Request Header Name"
-            hint={`Default: ${defaults.apiHeader}. Common values: Authorization, X-API-Key.`}
-            id="api-header"
-            value={header}
-            onChange={setHeader}
-            placeholder="X-API-Key"
-          />
+        <form onSubmit={save}>
+          <Card variant="outlined" sx={{ mb: 4, borderRadius: 2 }}>
+            <CardContent sx={{ p: 4 }}>
+              <Stack spacing={3}>
+                <TextField
+                  label="Agent URL"
+                  helperText={`Default: ${defaults.apiUrl}`}
+                  id="api-url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://your-agent.example.com/v1/chat"
+                  fullWidth
+                />
+                
+                <TextField
+                  label="API Key"
+                  helperText="Sent using the request header name below. If the header is Authorization, it becomes 'Bearer <key>'."
+                  id="api-key"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  placeholder="sk-..."
+                  type="password"
+                  fullWidth
+                />
 
-          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-            <div className="font-medium text-foreground">Outgoing request header preview</div>
-            <div className="mt-2 font-mono text-xs">
-              {header.trim() || defaults.apiHeader || "Authorization"}: {" "}
-              {key.trim()
-                ? header.trim().toLowerCase() === "authorization"
-                  ? `Bearer ${key.trim()}`
-                  : key.trim()
-                : "(enter an API key)"}
-            </div>
-          </div>
+                <TextField
+                  label="Request Header Name"
+                  helperText={`Default: ${defaults.apiHeader}. Common values: Authorization, X-API-Key.`}
+                  id="api-header"
+                  value={header}
+                  onChange={(e) => setHeader(e.target.value)}
+                  placeholder="X-API-Key"
+                  fullWidth
+                />
 
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn-gradient inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {saved ? <Check className="h-4 w-4 text-white" /> : null}
-              {saving ? "Saving..." : saved ? "Saved" : "Save changes"}
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                setSaving(true);
-                setError(null);
-                try {
-                  const response = await fetch("/api/settings", { method: "DELETE" });
-                  if (!response.ok) {
-                    throw new Error(await response.text());
-                  }
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 1,
+                    bgcolor: "action.hover",
+                    border: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                    Outgoing request header preview
+                  </Typography>
+                  <Typography variant="caption" fontFamily="monospace">
+                    {header.trim() || defaults.apiHeader || "Authorization"}:{" "}
+                    {key.trim()
+                      ? header.trim().toLowerCase() === "authorization"
+                        ? `Bearer ${key.trim()}`
+                        : key.trim()
+                      : "(enter an API key)"}
+                  </Typography>
+                </Box>
 
-                    const data = (await response.json()) as { settings?: SavedSettings };
-                    const resetSettings = data.settings ?? {
-                      apiUrl: defaults.apiUrl,
-                      apiKey: defaults.apiKey,
-                      apiHeader: defaults.apiHeader,
-                    };
+                {error && <Alert severity="error">{error}</Alert>}
 
-                  reset();
-                    updateSettings(resetSettings);
-                    setUrl(resetSettings.apiUrl);
-                    setKey(resetSettings.apiKey);
-                    setHeader(resetSettings.apiHeader);
-                  setSaved(false);
-                } catch (resetError) {
-                  setError(resetError instanceof Error ? resetError.message : "Failed to reset settings");
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              disabled={saving}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset to defaults
-            </button>
-          </div>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={saving}
+                    startIcon={saved ? <Check /> : null}
+                    sx={{
+                      background: "linear-gradient(90deg, #ff5e3a 0%, #ff2a6d 100%)",
+                      color: "white",
+                      "&:disabled": {
+                        opacity: 0.7,
+                      },
+                    }}
+                  >
+                    {saving ? "Saving..." : saved ? "Saved" : "Save changes"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    color="secondary"
+                    disabled={saving}
+                    startIcon={<RotateCcw />}
+                    onClick={async () => {
+                      setSaving(true);
+                      setError(null);
+                      try {
+                        const response = await fetch("/api/settings", { method: "DELETE" });
+                        if (!response.ok) {
+                          throw new Error(await response.text());
+                        }
 
-          {error ? <div className="text-sm text-red-600">{error}</div> : null}
+                        const data = (await response.json()) as { settings?: SavedSettings };
+                        const resetSettings = data.settings ?? {
+                          apiUrl: defaults.apiUrl,
+                          apiKey: defaults.apiKey,
+                          apiHeader: defaults.apiHeader,
+                        };
+
+                        reset();
+                        updateSettings(resetSettings);
+                        setUrl(resetSettings.apiUrl);
+                        setKey(resetSettings.apiKey);
+                        setHeader(resetSettings.apiHeader);
+                        setSaved(false);
+                      } catch (resetError) {
+                        setError(
+                          resetError instanceof Error ? resetError.message : "Failed to reset settings",
+                        );
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  >
+                    Reset to defaults
+                  </Button>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
         </form>
 
-        <div className="mt-6 rounded-xl border border-border/70 bg-muted/30 p-4 text-xs text-muted-foreground">
-          <div className="font-semibold text-foreground">Local .env values</div>
-          <div className="mt-2 font-mono">AGENT_URL = {defaults.apiUrl || "(unset)"}</div>
-          <div className="font-mono">AGENT_API_KEY = {defaults.apiKey ? "••••••" : "(unset)"}</div>
-          <div className="font-mono">AGENT_API_HEADER = {defaults.apiHeader || "(unset)"}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  id,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-}: {
-  label: string;
-  hint?: string;
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-2 h-11 w-full rounded-lg border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-      />
-      {hint && <div className="mt-1.5 text-xs text-muted-foreground">{hint}</div>}
-    </div>
+        <Card variant="outlined" sx={{ borderRadius: 2, bgcolor: "action.hover" }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+              Local .env values
+            </Typography>
+            <Typography variant="body2" component="div" fontFamily="monospace" color="text.secondary">
+              <div>AGENT_URL = {defaults.apiUrl || "(unset)"}</div>
+              <div>AGENT_API_KEY = {defaults.apiKey ? "••••••" : "(unset)"}</div>
+              <div>AGENT_API_HEADER = {defaults.apiHeader || "(unset)"}</div>
+            </Typography>
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
   );
 }

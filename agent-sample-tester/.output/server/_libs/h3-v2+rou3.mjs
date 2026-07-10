@@ -1,4 +1,4 @@
-import { a as FastResponse, o as FastURL } from "./h3+rou3+srvx.mjs";
+import { a as FastResponse, o as FastURL } from "./h3+rou3+srvx+unenv.mjs";
 //#region node_modules/rou3/dist/index.mjs
 var NullProtoObj = /* @__PURE__ */ (() => {
 	const e = function() {};

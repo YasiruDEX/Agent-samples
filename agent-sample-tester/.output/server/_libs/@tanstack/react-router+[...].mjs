@@ -1,6 +1,9 @@
-import { r as __toESM, t as __commonJSMin } from "../../_runtime.mjs";
+import { a as __toESM, n as __commonJSMin } from "../../__23tanstack-start-server-fn-resolver-BaOM1vmh.mjs";
 import { r as parseHref } from "../tanstack__history.mjs";
-import { i as require_react, r as require_jsx_runtime } from "../react+tanstack__react-query.mjs";
+import { o as require_react } from "../@emotion/react+[...].mjs";
+import { i as require_jsx_runtime } from "../@mui/private-theming+[...].mjs";
+import { o as require_react_dom } from "../mui__x-virtualizer+react-dom.mjs";
+import { w as require_with_selector } from "../@mui/x-internals+[...].mjs";
 import { PassThrough, Readable } from "node:stream";
 import { ReadableStream as ReadableStream$1 } from "node:stream/web";
 //#region node_modules/@tanstack/router-core/dist/esm/utils.js
@@ -3632,6 +3635,7 @@ function useForwardedRef(ref) {
 }
 //#endregion
 //#region node_modules/@tanstack/react-router/dist/esm/CatchBoundary.js
+var import_react_dom = /* @__PURE__ */ __toESM(require_react_dom(), 1);
 var import_jsx_runtime = require_jsx_runtime();
 function CatchBoundary(props) {
 	const errorComponent = props.errorComponent ?? ErrorComponent;
@@ -3997,147 +4001,8 @@ function purgeDeps(sub) {
 	while (dep !== void 0) dep = unlink(dep, sub);
 }
 //#endregion
-//#region node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js
-/**
-* @license React
-* use-sync-external-store-shim.production.js
-*
-* Copyright (c) Meta Platforms, Inc. and affiliates.
-*
-* This source code is licensed under the MIT license found in the
-* LICENSE file in the root directory of this source tree.
-*/
-var require_use_sync_external_store_shim_production = /* @__PURE__ */ __commonJSMin(((exports) => {
-	var React = require_react();
-	function is(x, y) {
-		return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
-	}
-	var objectIs = "function" === typeof Object.is ? Object.is : is;
-	var useState = React.useState;
-	var useEffect = React.useEffect;
-	var useLayoutEffect = React.useLayoutEffect;
-	var useDebugValue = React.useDebugValue;
-	function useSyncExternalStore$2(subscribe, getSnapshot) {
-		var value = getSnapshot(), _useState = useState({ inst: {
-			value,
-			getSnapshot
-		} }), inst = _useState[0].inst, forceUpdate = _useState[1];
-		useLayoutEffect(function() {
-			inst.value = value;
-			inst.getSnapshot = getSnapshot;
-			checkIfSnapshotChanged(inst) && forceUpdate({ inst });
-		}, [
-			subscribe,
-			value,
-			getSnapshot
-		]);
-		useEffect(function() {
-			checkIfSnapshotChanged(inst) && forceUpdate({ inst });
-			return subscribe(function() {
-				checkIfSnapshotChanged(inst) && forceUpdate({ inst });
-			});
-		}, [subscribe]);
-		useDebugValue(value);
-		return value;
-	}
-	function checkIfSnapshotChanged(inst) {
-		var latestGetSnapshot = inst.getSnapshot;
-		inst = inst.value;
-		try {
-			var nextValue = latestGetSnapshot();
-			return !objectIs(inst, nextValue);
-		} catch (error) {
-			return !0;
-		}
-	}
-	function useSyncExternalStore$1(subscribe, getSnapshot) {
-		return getSnapshot();
-	}
-	var shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
-	exports.useSyncExternalStore = void 0 !== React.useSyncExternalStore ? React.useSyncExternalStore : shim;
-}));
-//#endregion
-//#region node_modules/use-sync-external-store/shim/index.js
-var require_shim = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = require_use_sync_external_store_shim_production();
-}));
-//#endregion
-//#region node_modules/use-sync-external-store/cjs/use-sync-external-store-shim/with-selector.production.js
-/**
-* @license React
-* use-sync-external-store-shim/with-selector.production.js
-*
-* Copyright (c) Meta Platforms, Inc. and affiliates.
-*
-* This source code is licensed under the MIT license found in the
-* LICENSE file in the root directory of this source tree.
-*/
-var require_with_selector_production = /* @__PURE__ */ __commonJSMin(((exports) => {
-	var React = require_react();
-	var shim = require_shim();
-	function is(x, y) {
-		return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
-	}
-	var objectIs = "function" === typeof Object.is ? Object.is : is;
-	var useSyncExternalStore = shim.useSyncExternalStore;
-	var useRef = React.useRef;
-	var useEffect = React.useEffect;
-	var useMemo = React.useMemo;
-	var useDebugValue = React.useDebugValue;
-	exports.useSyncExternalStoreWithSelector = function(subscribe, getSnapshot, getServerSnapshot, selector, isEqual) {
-		var instRef = useRef(null);
-		if (null === instRef.current) {
-			var inst = {
-				hasValue: !1,
-				value: null
-			};
-			instRef.current = inst;
-		} else inst = instRef.current;
-		instRef = useMemo(function() {
-			function memoizedSelector(nextSnapshot) {
-				if (!hasMemo) {
-					hasMemo = !0;
-					memoizedSnapshot = nextSnapshot;
-					nextSnapshot = selector(nextSnapshot);
-					if (void 0 !== isEqual && inst.hasValue) {
-						var currentSelection = inst.value;
-						if (isEqual(currentSelection, nextSnapshot)) return memoizedSelection = currentSelection;
-					}
-					return memoizedSelection = nextSnapshot;
-				}
-				currentSelection = memoizedSelection;
-				if (objectIs(memoizedSnapshot, nextSnapshot)) return currentSelection;
-				var nextSelection = selector(nextSnapshot);
-				if (void 0 !== isEqual && isEqual(currentSelection, nextSelection)) return memoizedSnapshot = nextSnapshot, currentSelection;
-				memoizedSnapshot = nextSnapshot;
-				return memoizedSelection = nextSelection;
-			}
-			var hasMemo = !1, memoizedSnapshot, memoizedSelection, maybeGetServerSnapshot = void 0 === getServerSnapshot ? null : getServerSnapshot;
-			return [function() {
-				return memoizedSelector(getSnapshot());
-			}, null === maybeGetServerSnapshot ? void 0 : function() {
-				return memoizedSelector(maybeGetServerSnapshot());
-			}];
-		}, [
-			getSnapshot,
-			getServerSnapshot,
-			selector,
-			isEqual
-		]);
-		var value = useSyncExternalStore(subscribe, instRef[0], instRef[1]);
-		useEffect(function() {
-			inst.hasValue = !0;
-			inst.value = value;
-		}, [value]);
-		useDebugValue(value);
-		return value;
-	};
-}));
-//#endregion
 //#region node_modules/@tanstack/react-store/dist/esm/useStore.js
-var import_with_selector = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = require_with_selector_production();
-})))();
+var import_with_selector = require_with_selector();
 function defaultCompare(a, b) {
 	return a === b;
 }
@@ -4317,164 +4182,7 @@ function useRouteContext(opts) {
 	});
 }
 //#endregion
-//#region node_modules/react-dom/cjs/react-dom.production.js
-/**
-* @license React
-* react-dom.production.js
-*
-* Copyright (c) Meta Platforms, Inc. and affiliates.
-*
-* This source code is licensed under the MIT license found in the
-* LICENSE file in the root directory of this source tree.
-*/
-var require_react_dom_production = /* @__PURE__ */ __commonJSMin(((exports) => {
-	var React = require_react();
-	function formatProdErrorMessage(code) {
-		var url = "https://react.dev/errors/" + code;
-		if (1 < arguments.length) {
-			url += "?args[]=" + encodeURIComponent(arguments[1]);
-			for (var i = 2; i < arguments.length; i++) url += "&args[]=" + encodeURIComponent(arguments[i]);
-		}
-		return "Minified React error #" + code + "; visit " + url + " for the full message or use the non-minified dev environment for full errors and additional helpful warnings.";
-	}
-	function noop() {}
-	var Internals = {
-		d: {
-			f: noop,
-			r: function() {
-				throw Error(formatProdErrorMessage(522));
-			},
-			D: noop,
-			C: noop,
-			L: noop,
-			m: noop,
-			X: noop,
-			S: noop,
-			M: noop
-		},
-		p: 0,
-		findDOMNode: null
-	};
-	var REACT_PORTAL_TYPE = Symbol.for("react.portal");
-	function createPortal$1(children, containerInfo, implementation) {
-		var key = 3 < arguments.length && void 0 !== arguments[3] ? arguments[3] : null;
-		return {
-			$$typeof: REACT_PORTAL_TYPE,
-			key: null == key ? null : "" + key,
-			children,
-			containerInfo,
-			implementation
-		};
-	}
-	var ReactSharedInternals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-	function getCrossOriginStringAs(as, input) {
-		if ("font" === as) return "";
-		if ("string" === typeof input) return "use-credentials" === input ? input : "";
-	}
-	exports.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = Internals;
-	exports.createPortal = function(children, container) {
-		var key = 2 < arguments.length && void 0 !== arguments[2] ? arguments[2] : null;
-		if (!container || 1 !== container.nodeType && 9 !== container.nodeType && 11 !== container.nodeType) throw Error(formatProdErrorMessage(299));
-		return createPortal$1(children, container, null, key);
-	};
-	exports.flushSync = function(fn) {
-		var previousTransition = ReactSharedInternals.T, previousUpdatePriority = Internals.p;
-		try {
-			if (ReactSharedInternals.T = null, Internals.p = 2, fn) return fn();
-		} finally {
-			ReactSharedInternals.T = previousTransition, Internals.p = previousUpdatePriority, Internals.d.f();
-		}
-	};
-	exports.preconnect = function(href, options) {
-		"string" === typeof href && (options ? (options = options.crossOrigin, options = "string" === typeof options ? "use-credentials" === options ? options : "" : void 0) : options = null, Internals.d.C(href, options));
-	};
-	exports.prefetchDNS = function(href) {
-		"string" === typeof href && Internals.d.D(href);
-	};
-	exports.preinit = function(href, options) {
-		if ("string" === typeof href && options && "string" === typeof options.as) {
-			var as = options.as, crossOrigin = getCrossOriginStringAs(as, options.crossOrigin), integrity = "string" === typeof options.integrity ? options.integrity : void 0, fetchPriority = "string" === typeof options.fetchPriority ? options.fetchPriority : void 0;
-			"style" === as ? Internals.d.S(href, "string" === typeof options.precedence ? options.precedence : void 0, {
-				crossOrigin,
-				integrity,
-				fetchPriority
-			}) : "script" === as && Internals.d.X(href, {
-				crossOrigin,
-				integrity,
-				fetchPriority,
-				nonce: "string" === typeof options.nonce ? options.nonce : void 0
-			});
-		}
-	};
-	exports.preinitModule = function(href, options) {
-		if ("string" === typeof href) if ("object" === typeof options && null !== options) {
-			if (null == options.as || "script" === options.as) {
-				var crossOrigin = getCrossOriginStringAs(options.as, options.crossOrigin);
-				Internals.d.M(href, {
-					crossOrigin,
-					integrity: "string" === typeof options.integrity ? options.integrity : void 0,
-					nonce: "string" === typeof options.nonce ? options.nonce : void 0
-				});
-			}
-		} else options ?? Internals.d.M(href);
-	};
-	exports.preload = function(href, options) {
-		if ("string" === typeof href && "object" === typeof options && null !== options && "string" === typeof options.as) {
-			var as = options.as, crossOrigin = getCrossOriginStringAs(as, options.crossOrigin);
-			Internals.d.L(href, as, {
-				crossOrigin,
-				integrity: "string" === typeof options.integrity ? options.integrity : void 0,
-				nonce: "string" === typeof options.nonce ? options.nonce : void 0,
-				type: "string" === typeof options.type ? options.type : void 0,
-				fetchPriority: "string" === typeof options.fetchPriority ? options.fetchPriority : void 0,
-				referrerPolicy: "string" === typeof options.referrerPolicy ? options.referrerPolicy : void 0,
-				imageSrcSet: "string" === typeof options.imageSrcSet ? options.imageSrcSet : void 0,
-				imageSizes: "string" === typeof options.imageSizes ? options.imageSizes : void 0,
-				media: "string" === typeof options.media ? options.media : void 0
-			});
-		}
-	};
-	exports.preloadModule = function(href, options) {
-		if ("string" === typeof href) if (options) {
-			var crossOrigin = getCrossOriginStringAs(options.as, options.crossOrigin);
-			Internals.d.m(href, {
-				as: "string" === typeof options.as && "script" !== options.as ? options.as : void 0,
-				crossOrigin,
-				integrity: "string" === typeof options.integrity ? options.integrity : void 0
-			});
-		} else Internals.d.m(href);
-	};
-	exports.requestFormReset = function(form) {
-		Internals.d.r(form);
-	};
-	exports.unstable_batchedUpdates = function(fn, a) {
-		return fn(a);
-	};
-	exports.useFormState = function(action, initialState, permalink) {
-		return ReactSharedInternals.H.useFormState(action, initialState, permalink);
-	};
-	exports.useFormStatus = function() {
-		return ReactSharedInternals.H.useHostTransitionStatus();
-	};
-	exports.version = "19.2.7";
-}));
-//#endregion
-//#region node_modules/react-dom/index.js
-var require_react_dom = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	function checkDCE() {
-		if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") return;
-		try {
-			__REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE(checkDCE);
-		} catch (err) {
-			console.error(err);
-		}
-	}
-	checkDCE();
-	module.exports = require_react_dom_production();
-}));
-//#endregion
 //#region node_modules/@tanstack/react-router/dist/esm/link.js
-var import_react_dom = require_react_dom();
 /**
 * Build anchor-like props for declarative navigation and preloading.
 *

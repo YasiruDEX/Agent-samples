@@ -1,6 +1,19 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { MessageSquare, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { MessageSquare, Settings as SettingsIcon, Sparkles } from "@wso2/oxygen-ui-icons-react";
 import type { ReactNode } from "react";
+import {
+  Box,
+  Typography,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
+  Divider,
+  Stack,
+  IconButton,
+} from "@wso2/oxygen-ui";
 
 type NavItem = {
   to: "/" | "/settings";
@@ -9,95 +22,190 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Chat", icon: <MessageSquare className="h-4 w-4" /> },
-  { to: "/settings", label: "Settings", icon: <SettingsIcon className="h-4 w-4" /> },
+  { to: "/", label: "Chat", icon: <MessageSquare size={18} /> },
+  { to: "/settings", label: "Settings", icon: <SettingsIcon size={18} /> },
 ];
 
 export function AppShell() {
   const location = useLocation();
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
-        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 shadow-[0_0_32px_-18px_rgba(255,255,255,0.85)] backdrop-blur-sm">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight text-sidebar-foreground">
-              Agent Testing Workspace
-            </div>
-            <div className="text-xs text-muted-foreground">Agent validation dashboard</div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1 p-3">
-          {NAV.map((item) => {
-            const active =
-              item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
-                  (active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-inner ring-1 ring-primary/40"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground")
-                }
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-md text-white">
-                  {item.icon}
-                </span>
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="border-t border-sidebar-border p-4 text-xs text-muted-foreground">
-          © 2026 WSO2
-        </div>
-      </aside>
+    <Box sx={{ display: "flex", h: "100vh", w: "100vw", height: "100vh", width: "100vw", overflow: "hidden", bgcolor: "background.default", color: "text.primary" }}>
+      {/* Sidebar for Desktop */}
+      <Box
+        component="aside"
+        sx={{
+          display: { xs: "none", md: "flex" },
+          width: 260,
+          flexShrink: 0,
+          flexDirection: "column",
+          borderRight: "1px solid",
+          borderColor: "divider",
+          bgcolor: "background.paper",
+        }}
+      >
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ h: 64, height: 64, px: 3, borderBottom: "1px solid", borderColor: "divider" }}>
+          <Avatar
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: "primary.main",
+              color: "white",
+              boxShadow: "0 0 16px -4px rgba(255,94,58,0.4)",
+            }}
+          >
+            <Sparkles size={16} />
+          </Avatar>
+          <Box>
+            <Typography variant="body2" fontWeight="bold" noWrap>
+              Agent Testing
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              validation dashboard
+            </Typography>
+          </Box>
+        </Stack>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/60 px-4 backdrop-blur md:px-6">
-          <div className="flex items-center gap-3 md:hidden">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-white/10 shadow-[0_0_28px_-16px_rgba(255,255,255,0.85)] backdrop-blur-sm">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <div className="text-sm font-semibold">Agent Testing Workspace</div>
-          </div>
-          <div className="hidden text-sm text-muted-foreground md:block">
+        <Box sx={{ flex: 1, py: 2, px: 1 }}>
+          <List>
+            {NAV.map((item) => {
+              const active =
+                item.to === "/"
+                  ? location.pathname === "/"
+                  : location.pathname.startsWith(item.to);
+              return (
+                <ListItem key={item.to} disablePadding>
+                  <Link
+                    to={item.to}
+                    style={{ textDecoration: "none", color: "inherit", width: "100%" }}
+                  >
+                    <ListItemButton
+                      selected={active}
+                      sx={{
+                        borderRadius: 2,
+                        mb: 0.5,
+                        "&.Mui-selected": {
+                          bgcolor: "action.selected",
+                          color: "primary.main",
+                          "&:hover": {
+                            bgcolor: "action.selected",
+                          },
+                        },
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          minWidth: 36,
+                          color: active ? "primary.main" : "text.secondary",
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{
+                          variant: "body2",
+                          fontWeight: active ? "bold" : "medium",
+                        }}
+                      />
+                    </ListItemButton>
+                  </Link>
+                </ListItem>
+              );
+            })}
+          </List>
+        </Box>
+
+        <Divider />
+        <Box sx={{ p: 2, textAlign: "center" }}>
+          <Typography variant="caption" color="text.secondary">
+            © 2026 WSO2
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Main Content Area */}
+      <Box sx={{ display: "flex", flex: 1, flexDirection: "column", minWidth: 0 }}>
+        {/* Header */}
+        <Box
+          component="header"
+          sx={{
+            display: "flex",
+            h: 64,
+            height: 64,
+            alignItems: "center",
+            justifyContent: "space-between",
+            px: { xs: 2, md: 3 },
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
+        >
+          {/* Mobile view brand header */}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { md: "none" } }}>
+            <Avatar sx={{ width: 28, height: 28, bgcolor: "primary.main", color: "white" }}>
+              <Sparkles size={14} />
+            </Avatar>
+            <Typography variant="body2" fontWeight="bold">
+              Agent Tester
+            </Typography>
+          </Stack>
+
+          {/* Desktop page title */}
+          <Typography variant="body2" color="text.secondary" sx={{ display: { xs: "none", md: "block" } }}>
             {location.pathname === "/settings" ? "Settings" : "Chat"}
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-secondary text-sm font-semibold">
-              A
-            </div>
-          </div>
-        </header>
-        <main className="min-h-0 flex-1 overflow-hidden">
+          </Typography>
+
+          <Avatar sx={{ width: 32, height: 32, bgcolor: "secondary.main", color: "secondary.contrastText", fontSize: "0.875rem", fontWeight: "bold" }}>
+            A
+          </Avatar>
+        </Box>
+
+        {/* Main page view */}
+        <Box component="main" sx={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
           <Outlet />
-        </main>
-        <nav className="flex shrink-0 border-t border-border bg-sidebar md:hidden">
+        </Box>
+
+        {/* Mobile Navigation bar */}
+        <Box
+          component="nav"
+          sx={{
+            display: { xs: "flex", md: "none" },
+            borderTop: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
+        >
           {NAV.map((item) => {
             const active =
-              item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to);
+              item.to === "/"
+                ? location.pathname === "/"
+                : location.pathname.startsWith(item.to);
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                className={
-                  "flex flex-1 flex-col items-center gap-1 py-3 text-xs " +
-                  (active ? "text-white" : "text-muted-foreground")
-                }
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "8px 0 6px",
+                  textDecoration: "none",
+                  color: active ? "primary.main" : "text.secondary",
+                }}
               >
-                <span className="text-white">{item.icon}</span>
-                {item.label}
+                <IconButton color={active ? "primary" : "default"} size="small" disableRipple>
+                  {item.icon}
+                </IconButton>
+                <Typography variant="caption" sx={{ fontSize: "10px", mt: 0.25 }}>
+                  {item.label}
+                </Typography>
               </Link>
             );
           })}
-        </nav>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   );
 }

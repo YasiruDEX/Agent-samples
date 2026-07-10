@@ -12,4 +12,16 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    ssr: {
+      noExternal: [
+        "@wso2/oxygen-ui",
+        "@wso2/oxygen-ui-icons-react",
+        "@mui/material",
+        "@mui/x-data-grid",
+        "@mui/x-date-pickers",
+        "@mui/x-tree-view",
+      ],
+    },
+  },
 });

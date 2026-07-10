@@ -1,8 +1,20 @@
 import { sendChat, type ChatMessage } from "@/lib/chat-api";
 import { useSettings } from "@/lib/settings-context";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Sparkles, User, Trash2 } from "lucide-react";
+import { Send, Sparkles, User, Trash2 } from "@wso2/oxygen-ui-icons-react";
 import { useEffect, useRef, useState } from "react";
+import {
+  Box,
+  Button,
+  IconButton,
+  TextField,
+  Typography,
+  Avatar,
+  Stack,
+  Divider,
+  Paper,
+  Alert,
+} from "@wso2/oxygen-ui";
 
 const CHAT_MESSAGES_STORAGE_KEY = "agent-sample-tester:chat-messages";
 
@@ -89,7 +101,7 @@ function ChatPage() {
     }
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
@@ -97,109 +109,186 @@ function ChatPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <Box sx={{ display: "flex", flexDirection: "col", height: "100%", position: "relative" }} className="flex flex-col">
       {messages.length > 0 && (
-        <div className="flex justify-between items-center shrink-0 border-b border-border bg-background/50 px-4 py-2 backdrop-blur md:px-6">
-          <span className="text-xs text-muted-foreground">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            px: { xs: 2, md: 3 },
+            py: 1,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            zIndex: 10,
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
             {messages.length} message{messages.length === 1 ? "" : "s"}
-          </span>
-          <button
+          </Typography>
+          <Button
+            size="small"
+            color="error"
+            variant="outlined"
+            startIcon={<Trash2 size={16} />}
             onClick={() => setMessages([])}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-accent transition-colors"
           >
-            <Trash2 className="h-3.5 w-3.5" />
             Clear Chat
-          </button>
-        </div>
+          </Button>
+        </Box>
       )}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 md:px-6">
+
+      <Box
+        ref={scrollRef}
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          p: { xs: 2, md: 3 },
+          minHeight: 0,
+        }}
+      >
+        <Stack spacing={3} sx={{ maxWidth: "48rem", mx: "auto", width: "100%", py: 2 }}>
           {messages.length === 0 && !loading && <EmptyState />}
           {messages.map((m, i) => (
             <MessageBubble key={i} message={m} />
           ))}
           {loading && <TypingIndicator />}
-          {error && (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground">
-              {error}
-            </div>
-          )}
-        </div>
-      </div>
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </Box>
 
-      <div className="shrink-0 border-t border-border bg-background/80 px-4 py-4 backdrop-blur md:px-6">
-        <div className="mx-auto flex w-full max-w-3xl items-end gap-3">
-          <div className="flex-1 rounded-2xl border border-border bg-card px-4 py-3 focus-within:ring-2 focus-within:ring-primary/50">
-            <textarea
-              ref={inputRef}
+      <Box
+        sx={{
+          borderTop: "1px solid",
+          borderColor: "divider",
+          bgcolor: "background.paper",
+          p: { xs: 2, md: 3 },
+        }}
+      >
+        <Box sx={{ maxWidth: "48rem", mx: "auto", width: "100%" }}>
+          <Stack direction="row" spacing={2} alignItems="flex-end">
+            <TextField
+              inputRef={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Message your agent…"
-              rows={1}
-              className="max-h-40 w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+              multiline
+              maxRows={5}
+              fullWidth
+              variant="outlined"
+              size="small"
+              disabled={loading}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 3,
+                },
+              }}
             />
-          </div>
-          <button
-            onClick={submit}
-            disabled={loading || !input.trim()}
-            className="btn-gradient inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold"
-            aria-label="Send message"
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="mx-auto mt-2 w-full max-w-3xl text-center text-[11px] text-muted-foreground">
-          Endpoint: <span className="font-mono">{apiUrl}</span>
-        </div>
-      </div>
-    </div>
+            <IconButton
+              onClick={submit}
+              disabled={loading || !input.trim()}
+              sx={{
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                "&:hover": {
+                  bgcolor: "primary.dark",
+                },
+                "&:disabled": {
+                  bgcolor: "action.disabledBackground",
+                  color: "action.disabled",
+                },
+                width: 40,
+                height: 40,
+              }}
+            >
+              <Send size={18} />
+            </IconButton>
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center", mt: 1.5 }}>
+            Endpoint: <span style={{ fontFamily: "monospace" }}>{apiUrl}</span>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="mx-auto mt-16 flex max-w-md flex-col items-center text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_0_32px_-18px_rgba(255,255,255,0.85)] backdrop-blur-sm">
-        <Sparkles className="h-6 w-6 text-white" />
-      </div>
-      <h1 className="mt-5 text-2xl font-semibold tracking-tight">How can I help today?</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        mt: 8,
+        mx: "auto",
+        maxWidth: "28rem",
+      }}
+    >
+      <Avatar
+        sx={{
+          width: 56,
+          height: 56,
+          mb: 2.5,
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
+          boxShadow: "0 0 24px -6px rgba(255,94,58,0.5)",
+        }}
+      >
+        <Sparkles size={28} />
+      </Avatar>
+      <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
+        How can I help today?
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
         Start a conversation with your agent. Configure the endpoint and API key from{" "}
-        <span className="text-foreground">Settings</span>.
-      </p>
-    </div>
+        <Typography component="span" variant="body2" fontWeight="medium" color="text.primary">
+          Settings
+        </Typography>
+        .
+      </Typography>
+    </Box>
   );
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
   return (
-    <div className={"flex gap-3 " + (isUser ? "flex-row-reverse" : "flex-row")}>
-      <div
-        className={
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg " +
-          (isUser ? "bg-secondary text-secondary-foreground" : "btn-gradient")
-        }
+    <Stack direction={isUser ? "row-reverse" : "row"} spacing={2} sx={{ width: "100%" }}>
+      <Avatar
+        sx={{
+          width: 36,
+          height: 36,
+          bgcolor: isUser ? "secondary.main" : "primary.main",
+          color: "white",
+        }}
       >
-        {isUser ? <User className="h-4 w-4 text-white" /> : <Sparkles className="h-4 w-4 text-white" />}
-      </div>
-      <div
-        className={
-          "min-w-0 max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words overflow-hidden " +
-          (isUser
-            ? "bg-primary/15 text-foreground ring-1 ring-primary/30"
-            : "bg-card text-card-foreground ring-1 ring-border")
-        }
+        {isUser ? <User size={18} /> : <Sparkles size={18} />}
+      </Avatar>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          maxWidth: "80%",
+          borderRadius: 3,
+          bgcolor: isUser ? "primary.light" : "action.hover",
+          color: isUser ? "primary.contrastText" : "text.primary",
+          border: "1px solid",
+          borderColor: isUser ? "primary.main" : "divider",
+          wordBreak: "break-word",
+        }}
       >
         {message.role === "assistant" ? <MarkdownText value={message.content} /> : <PlainText value={message.content} />}
-      </div>
-    </div>
+      </Paper>
+    </Stack>
   );
 }
 
 function PlainText({ value }: { value: string }) {
-  return <div className="whitespace-pre-wrap break-words">{value}</div>;
+  return <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{value}</div>;
 }
 
 function MarkdownText({ value }: { value: string }) {
@@ -210,13 +299,13 @@ function MarkdownText({ value }: { value: string }) {
   }
 
   return (
-    <div className="space-y-3 whitespace-normal break-words">
+    <Stack spacing={1.5} sx={{ whiteSpace: "normal", wordBreak: "break-word" }}>
       {blocks.map((block, index) => {
         if (block.type === "list") {
           return (
-            <ol key={index} className="space-y-2 pl-5">
+            <ol key={index} style={{ paddingLeft: "1.25rem", margin: 0 }}>
               {block.items.map((item, itemIndex) => (
-                <li key={itemIndex} className="leading-relaxed">
+                <li key={itemIndex} style={{ marginBottom: "0.25rem" }}>
                   <InlineMarkdown value={item} />
                 </li>
               ))}
@@ -226,22 +315,29 @@ function MarkdownText({ value }: { value: string }) {
 
         if (block.type === "quote") {
           return (
-            <blockquote
+            <Box
               key={index}
-              className="border-l-2 border-border/80 pl-3 text-muted-foreground"
+              component="blockquote"
+              sx={{
+                borderLeft: "2px solid",
+                borderColor: "divider",
+                pl: 1.5,
+                m: 0,
+                color: "text.secondary",
+              }}
             >
               <InlineMarkdown value={block.text} />
-            </blockquote>
+            </Box>
           );
         }
 
         return (
-          <p key={index} className="leading-relaxed">
+          <Typography key={index} variant="body2" sx={{ lineHeight: 1.6 }}>
             <InlineMarkdown value={block.text} />
-          </p>
+          </Typography>
         );
       })}
-    </div>
+    </Stack>
   );
 }
 
@@ -258,7 +354,11 @@ function InlineMarkdown({ value }: { value: string }) {
               href={segment.href}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-primary underline underline-offset-4 hover:opacity-90"
+              style={{
+                color: "inherit",
+                textDecoration: "underline",
+                fontWeight: 500,
+              }}
             >
               {segment.text}
             </a>
@@ -266,12 +366,25 @@ function InlineMarkdown({ value }: { value: string }) {
         }
 
         if (segment.type === "strong") {
-          return <strong key={index} className="font-semibold text-foreground">{segment.text}</strong>;
+          return (
+            <Typography key={index} component="strong" variant="body2" fontWeight="bold">
+              {segment.text}
+            </Typography>
+          );
         }
 
         if (segment.type === "code") {
           return (
-            <code key={index} className="rounded bg-background/70 px-1.5 py-0.5 font-mono text-[0.92em]">
+            <code
+              key={index}
+              style={{
+                backgroundColor: "rgba(0, 0, 0, 0.05)",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontFamily: "monospace",
+                fontSize: "0.9em",
+              }}
+            >
               {segment.text}
             </code>
           );
@@ -348,21 +461,51 @@ function parseInlineSegments(value: string): InlineSegment[] {
 
 function TypingIndicator() {
   return (
-    <div className="flex gap-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 shadow-[0_0_24px_-16px_rgba(255,255,255,0.85)] backdrop-blur-sm">
-        <Sparkles className="h-4 w-4 text-white" />
-      </div>
-      <div className="flex items-center gap-1.5 rounded-2xl bg-card px-4 py-3 ring-1 ring-border">
+    <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+      <Avatar
+        sx={{
+          width: 36,
+          height: 36,
+          bgcolor: "primary.main",
+          color: "white",
+        }}
+      >
+        <Sparkles size={18} />
+      </Avatar>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          borderRadius: 3,
+          bgcolor: "action.hover",
+          border: "1px solid",
+          borderColor: "divider",
+          display: "flex",
+          alignItems: "center",
+          gap: 0.5,
+        }}
+      >
         <Dot delay="0ms" />
         <Dot delay="150ms" />
         <Dot delay="300ms" />
-      </div>
-    </div>
+      </Paper>
+    </Stack>
   );
 }
 
 function Dot({ delay }: { delay: string }) {
   return (
-    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/80" style={{ animationDelay: delay }} />
+    <Box
+      component="span"
+      className="animate-bounce"
+      sx={{
+        width: 6,
+        height: 6,
+        bgcolor: "text.secondary",
+        borderRadius: "50%",
+        display: "inline-block",
+        animationDelay: delay,
+      }}
+    />
   );
 }
