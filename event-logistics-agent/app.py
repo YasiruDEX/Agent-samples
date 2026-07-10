@@ -75,9 +75,14 @@ async def global_exception_handler(request, exc):
 # ---------------------------------------------------------------------------
 
 
+class ChatMessageInput(BaseModel):
+    role: str
+    content: str
+
 class ChatRequest(BaseModel):
     session_id: str
-    message: str
+    message: str = ""
+    messages: list[ChatMessageInput] | None = None
 
 
 class ChatResponse(BaseModel):
@@ -148,7 +153,7 @@ def _stringify_mcp_result(result: Any) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _run_chat_loop(message: str) -> str:
+async def _run_chat_loop(request: ChatRequest) -> str:
     if not settings.openai_api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -163,17 +168,19 @@ async def _run_chat_loop(message: str) -> str:
     openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
     mcp_headers = {"X-Goog-Api-Key": settings.agent_mcp_1_api_key}
 
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "system",
-            "content": (
-                "You are a Google Maps assistant. Use the available MCP tools for "
-                "places, weather, routes, and related map lookups. Do not invent map "
-                "data. If required fields are missing, ask a concise follow-up question."
-            ),
-        },
-        {"role": "user", "content": message},
-    ]
+    system_prompt = (
+        "You are a Google Maps assistant. Use the available MCP tools for "
+        "places, weather, routes, and related map lookups. Do not invent map "
+        "data. If required fields are missing, ask a concise follow-up question."
+    )
+
+    messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
+    
+    if request.messages:
+        for m in request.messages:
+            messages.append({"role": m.role, "content": m.content})
+    else:
+        messages.append({"role": "user", "content": request.message})
 
     async with streamablehttp_client(
         settings.agent_mcp_1_url, headers=mcp_headers
@@ -258,7 +265,7 @@ async def chat(request: ChatRequest):
     General-purpose Google Maps assistant backed by OpenAI + MCP tools.
     Use for directions, place searches, route planning, and general map queries.
     """
-    response = await _run_chat_loop(request.message)
+    response = await _run_chat_loop(request)
     return ChatResponse(response=response)
 
 
