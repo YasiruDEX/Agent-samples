@@ -3,5 +3,6 @@ jwt-openai-agent/test_endpoint.py
 *.env
 **/.env
 **/.venv
-
 */venv
+
+node_modules/
