@@ -81,8 +81,7 @@ class ChatMessageInput(BaseModel):
 
 class ChatRequest(BaseModel):
     session_id: str
-    message: str = ""
-    messages: list[ChatMessageInput] | None = None
+    messages: list[ChatMessageInput]
 
 
 class ChatResponse(BaseModel):
@@ -176,11 +175,8 @@ async def _run_chat_loop(request: ChatRequest) -> str:
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
     
-    if request.messages:
-        for m in request.messages:
-            messages.append({"role": m.role, "content": m.content})
-    else:
-        messages.append({"role": "user", "content": request.message})
+    for m in request.messages:
+        messages.append({"role": m.role, "content": m.content})
 
     async with streamablehttp_client(
         settings.agent_mcp_1_url, headers=mcp_headers

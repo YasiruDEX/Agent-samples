@@ -339,7 +339,7 @@ function MarkdownText({ value }: { value: string }) {
         }
 
         return (
-          <Typography key={index} variant="body2" sx={{ lineHeight: 1.6 }}>
+          <Typography key={index} variant="body2" sx={{ lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
             <InlineMarkdown value={block.text} />
           </Typography>
         );
@@ -415,14 +415,15 @@ type InlineSegment =
   | { type: "code"; text: string };
 
 function parseMarkdownBlocks(value: string): MarkdownBlock[] {
-  const normalized = value.replace(/\r\n/g, "\n").trim();
+  // Convert headers (### Text) to bold (**Text**)
+  let normalized = value.replace(/\r\n/g, "\n").replace(/^#{1,6}\s+(.*)$/gm, "**$1**").trim();
   if (!normalized) return [];
 
   const rawBlocks = normalized.split(/\n\s*\n/);
   return rawBlocks.map((rawBlock) => {
     const lines = rawBlock.split("\n").map((line) => line.trimEnd());
     const listItems = lines
-      .map((line) => line.match(/^\s*\d+\.\s+(.*)$/)?.[1]?.trim())
+      .map((line) => line.match(/^\s*(?:\d+\.|-|\*)\s+(.*)$/)?.[1]?.trim())
       .filter((item): item is string => Boolean(item));
 
     if (listItems.length > 0 && listItems.length === lines.length) {
@@ -433,7 +434,7 @@ function parseMarkdownBlocks(value: string): MarkdownBlock[] {
       return { type: "quote", text: lines[0].slice(2).trim() };
     }
 
-    return { type: "paragraph", text: lines.join(" ").trim() };
+    return { type: "paragraph", text: lines.join("\n").trim() };
   });
 }
 

@@ -60,16 +60,8 @@ export const Route = createFileRoute("/api/chat")({
           }
         }
 
-        // Forward the FULL conversation history to the external agent.
-        // We send both `message` (last user turn, for agents that only read a single
-        // string field) and `messages` (the full history array, for agents that support
-        // multi-turn conversation context).
-        const lastUserMessage =
-          [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
-
         const outboundBody: Record<string, unknown> = {
           session_id: typeof body.session_id === "string" ? body.session_id : "default",
-          message: lastUserMessage,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
         };
 
