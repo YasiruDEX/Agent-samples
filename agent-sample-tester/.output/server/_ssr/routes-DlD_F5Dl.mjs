@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { n as useSettings } from "./settings-context-Cy0u4pAg.mjs";
 import { i as Send, n as Sparkles, t as User } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DbedQsHZ.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DlD_F5Dl.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var SESSION_ID_STORAGE_KEY = "agent-sample-tester:session-id";
@@ -49,6 +49,7 @@ function extractText(data) {
 	if (!data || typeof data !== "object") return "";
 	const obj = data;
 	if (typeof obj.text === "string") return obj.text;
+	if (typeof obj.response === "string") return obj.response;
 	if (typeof obj.content === "string") return obj.content;
 	if (typeof obj.message === "string") return obj.message;
 	if (Array.isArray(obj.choices) && obj.choices.length > 0) {
@@ -195,10 +196,114 @@ function MessageBubble({ message }) {
 			className: "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg " + (isUser ? "bg-secondary text-secondary-foreground" : "btn-gradient"),
 			children: isUser ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(User, { className: "h-4 w-4 text-white" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "h-4 w-4 text-white" })
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed " + (isUser ? "bg-primary/15 text-foreground ring-1 ring-primary/30" : "bg-card text-card-foreground ring-1 ring-border"),
-			children: message.content
+			className: "min-w-0 max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words overflow-hidden " + (isUser ? "bg-primary/15 text-foreground ring-1 ring-primary/30" : "bg-card text-card-foreground ring-1 ring-border"),
+			children: message.role === "assistant" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarkdownText, { value: message.content }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PlainText, { value: message.content })
 		})]
 	});
+}
+function PlainText({ value }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "whitespace-pre-wrap break-words",
+		children: value
+	});
+}
+function MarkdownText({ value }) {
+	const blocks = parseMarkdownBlocks(value);
+	if (blocks.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PlainText, { value });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "space-y-3 whitespace-normal break-words",
+		children: blocks.map((block, index) => {
+			if (block.type === "list") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
+				className: "space-y-2 pl-5",
+				children: block.items.map((item, itemIndex) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
+					className: "leading-relaxed",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InlineMarkdown, { value: item })
+				}, itemIndex))
+			}, index);
+			if (block.type === "quote") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("blockquote", {
+				className: "border-l-2 border-border/80 pl-3 text-muted-foreground",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InlineMarkdown, { value: block.text })
+			}, index);
+			return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "leading-relaxed",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InlineMarkdown, { value: block.text })
+			}, index);
+		})
+	});
+}
+function InlineMarkdown({ value }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: parseInlineSegments(value).map((segment, index) => {
+		if (segment.type === "link") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+			href: segment.href,
+			target: "_blank",
+			rel: "noreferrer",
+			className: "font-medium text-primary underline underline-offset-4 hover:opacity-90",
+			children: segment.text
+		}, index);
+		if (segment.type === "strong") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+			className: "font-semibold text-foreground",
+			children: segment.text
+		}, index);
+		if (segment.type === "code") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("code", {
+			className: "rounded bg-background/70 px-1.5 py-0.5 font-mono text-[0.92em]",
+			children: segment.text
+		}, index);
+		return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: segment.text }, index);
+	}) });
+}
+function parseMarkdownBlocks(value) {
+	const normalized = value.replace(/\r\n/g, "\n").trim();
+	if (!normalized) return [];
+	return normalized.split(/\n\s*\n/).map((rawBlock) => {
+		const lines = rawBlock.split("\n").map((line) => line.trimEnd());
+		const listItems = lines.map((line) => line.match(/^\s*\d+\.\s+(.*)$/)?.[1]?.trim()).filter((item) => Boolean(item));
+		if (listItems.length > 0 && listItems.length === lines.length) return {
+			type: "list",
+			items: listItems
+		};
+		if (lines.length === 1 && lines[0].startsWith("> ")) return {
+			type: "quote",
+			text: lines[0].slice(2).trim()
+		};
+		return {
+			type: "paragraph",
+			text: lines.join(" ").trim()
+		};
+	});
+}
+function parseInlineSegments(value) {
+	const segments = [];
+	const pattern = /\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|`([^`]+)`/g;
+	let lastIndex = 0;
+	for (const match of value.matchAll(pattern)) {
+		const index = match.index ?? 0;
+		if (index > lastIndex) segments.push({
+			type: "text",
+			text: value.slice(lastIndex, index)
+		});
+		if (match[1] && match[2]) segments.push({
+			type: "link",
+			text: match[1],
+			href: match[2]
+		});
+		else if (match[3]) segments.push({
+			type: "strong",
+			text: match[3]
+		});
+		else if (match[4]) segments.push({
+			type: "code",
+			text: match[4]
+		});
+		lastIndex = index + match[0].length;
+	}
+	if (lastIndex < value.length) segments.push({
+		type: "text",
+		text: value.slice(lastIndex)
+	});
+	return segments.length > 0 ? segments : [{
+		type: "text",
+		text: value
+	}];
 }
 function TypingIndicator() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {

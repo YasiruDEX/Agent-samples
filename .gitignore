@@ -6,3 +6,4 @@ jwt-openai-agent/test_endpoint.py
 */venv
 
 node_modules/
+agent-sample-tester/commands

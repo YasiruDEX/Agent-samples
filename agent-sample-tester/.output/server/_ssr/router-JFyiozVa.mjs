@@ -7,10 +7,10 @@ import { n as Sparkles, o as MessageSquare, r as Settings } from "../_libs/lucid
 import { t as createOpenAICompatible } from "../_libs/ai-sdk__openai-compatible.mjs";
 import { t as generateText } from "../_libs/ai.mjs";
 import processModule from "node:process";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-U_InjBev.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-JFyiozVa.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-var styles_default = "/assets/styles-V1B0A6nB.css";
+var styles_default = "/assets/styles-B0UXBfE1.css";
 var NAV = [{
 	to: "/",
 	label: "Chat",
@@ -316,7 +316,7 @@ var Route$2 = createFileRoute("/settings")({
 	}] }),
 	component: lazyRouteComponent($$splitComponentImporter$1, "component")
 });
-var $$splitComponentImporter = () => import("./routes-DbedQsHZ.mjs");
+var $$splitComponentImporter = () => import("./routes-DlD_F5Dl.mjs");
 var Route$1 = createFileRoute("/")({
 	head: () => ({ meta: [{ title: "Conversation · Agent Testing Workspace" }, {
 		name: "description",

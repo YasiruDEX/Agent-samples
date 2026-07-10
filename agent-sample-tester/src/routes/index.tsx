@@ -136,16 +136,164 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       </div>
       <div
         className={
-          "max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed " +
+          "min-w-0 max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words overflow-hidden " +
           (isUser
             ? "bg-primary/15 text-foreground ring-1 ring-primary/30"
             : "bg-card text-card-foreground ring-1 ring-border")
         }
       >
-        {message.content}
+        {message.role === "assistant" ? <MarkdownText value={message.content} /> : <PlainText value={message.content} />}
       </div>
     </div>
   );
+}
+
+function PlainText({ value }: { value: string }) {
+  return <div className="whitespace-pre-wrap break-words">{value}</div>;
+}
+
+function MarkdownText({ value }: { value: string }) {
+  const blocks = parseMarkdownBlocks(value);
+
+  if (blocks.length === 0) {
+    return <PlainText value={value} />;
+  }
+
+  return (
+    <div className="space-y-3 whitespace-normal break-words">
+      {blocks.map((block, index) => {
+        if (block.type === "list") {
+          return (
+            <ol key={index} className="space-y-2 pl-5">
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex} className="leading-relaxed">
+                  <InlineMarkdown value={item} />
+                </li>
+              ))}
+            </ol>
+          );
+        }
+
+        if (block.type === "quote") {
+          return (
+            <blockquote
+              key={index}
+              className="border-l-2 border-border/80 pl-3 text-muted-foreground"
+            >
+              <InlineMarkdown value={block.text} />
+            </blockquote>
+          );
+        }
+
+        return (
+          <p key={index} className="leading-relaxed">
+            <InlineMarkdown value={block.text} />
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function InlineMarkdown({ value }: { value: string }) {
+  const segments = parseInlineSegments(value);
+
+  return (
+    <>
+      {segments.map((segment, index) => {
+        if (segment.type === "link") {
+          return (
+            <a
+              key={index}
+              href={segment.href}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-primary underline underline-offset-4 hover:opacity-90"
+            >
+              {segment.text}
+            </a>
+          );
+        }
+
+        if (segment.type === "strong") {
+          return <strong key={index} className="font-semibold text-foreground">{segment.text}</strong>;
+        }
+
+        if (segment.type === "code") {
+          return (
+            <code key={index} className="rounded bg-background/70 px-1.5 py-0.5 font-mono text-[0.92em]">
+              {segment.text}
+            </code>
+          );
+        }
+
+        return <span key={index}>{segment.text}</span>;
+      })}
+    </>
+  );
+}
+
+type MarkdownBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "list"; items: string[] }
+  | { type: "quote"; text: string };
+
+type InlineSegment =
+  | { type: "text"; text: string }
+  | { type: "link"; text: string; href: string }
+  | { type: "strong"; text: string }
+  | { type: "code"; text: string };
+
+function parseMarkdownBlocks(value: string): MarkdownBlock[] {
+  const normalized = value.replace(/\r\n/g, "\n").trim();
+  if (!normalized) return [];
+
+  const rawBlocks = normalized.split(/\n\s*\n/);
+  return rawBlocks.map((rawBlock) => {
+    const lines = rawBlock.split("\n").map((line) => line.trimEnd());
+    const listItems = lines
+      .map((line) => line.match(/^\s*\d+\.\s+(.*)$/)?.[1]?.trim())
+      .filter((item): item is string => Boolean(item));
+
+    if (listItems.length > 0 && listItems.length === lines.length) {
+      return { type: "list", items: listItems };
+    }
+
+    if (lines.length === 1 && lines[0].startsWith("> ")) {
+      return { type: "quote", text: lines[0].slice(2).trim() };
+    }
+
+    return { type: "paragraph", text: lines.join(" ").trim() };
+  });
+}
+
+function parseInlineSegments(value: string): InlineSegment[] {
+  const segments: InlineSegment[] = [];
+  const pattern = /\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|`([^`]+)`/g;
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      segments.push({ type: "text", text: value.slice(lastIndex, index) });
+    }
+
+    if (match[1] && match[2]) {
+      segments.push({ type: "link", text: match[1], href: match[2] });
+    } else if (match[3]) {
+      segments.push({ type: "strong", text: match[3] });
+    } else if (match[4]) {
+      segments.push({ type: "code", text: match[4] });
+    }
+
+    lastIndex = index + match[0].length;
+  }
+
+  if (lastIndex < value.length) {
+    segments.push({ type: "text", text: value.slice(lastIndex) });
+  }
+
+  return segments.length > 0 ? segments : [{ type: "text", text: value }];
 }
 
 function TypingIndicator() {

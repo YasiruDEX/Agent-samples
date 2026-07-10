@@ -18,44 +18,44 @@ var public_assets_data_default = {
 	"/favicon.ico": {
 		"type": "image/vnd.microsoft.icon",
 		"etag": "\"4f95-3RXc3p2mhEAs1WBwaIvE0Y0uu0Y\"",
-		"mtime": "2026-07-10T05:37:19.207Z",
+		"mtime": "2026-07-10T05:44:05.198Z",
 		"size": 20373,
 		"path": "../public/favicon.ico"
 	},
 	"/favicon.svg": {
 		"type": "image/svg+xml",
 		"etag": "\"194-RLSS68ap0N7bZFaqnsc5NOcWRyk\"",
-		"mtime": "2026-07-10T05:37:19.207Z",
+		"mtime": "2026-07-10T05:44:05.198Z",
 		"size": 404,
 		"path": "../public/favicon.svg"
 	},
-	"/assets/routes-e3_ghYQo.js": {
+	"/assets/settings-UXBZLJN3.js": {
 		"type": "text/javascript; charset=utf-8",
-		"etag": "\"16df-tRERvswTsp5V5mSEn63Su21z4yE\"",
-		"mtime": "2026-07-10T05:37:19.076Z",
-		"size": 5855,
-		"path": "../public/assets/routes-e3_ghYQo.js"
-	},
-	"/assets/index-BtaSVJLk.js": {
-		"type": "text/javascript; charset=utf-8",
-		"etag": "\"59484-BC/9xV0gF2njVqIpe9lqUDidNNI\"",
-		"mtime": "2026-07-10T05:37:19.076Z",
-		"size": 365700,
-		"path": "../public/assets/index-BtaSVJLk.js"
-	},
-	"/assets/settings-CWXIJdQB.js": {
-		"type": "text/javascript; charset=utf-8",
-		"etag": "\"f52-tgQzHydxefeTShRtVMt9tcH0pOc\"",
-		"mtime": "2026-07-10T05:37:19.076Z",
+		"etag": "\"f52-//djc92aC+u6oPWOg1wXSfWic8k\"",
+		"mtime": "2026-07-10T05:44:05.043Z",
 		"size": 3922,
-		"path": "../public/assets/settings-CWXIJdQB.js"
+		"path": "../public/assets/settings-UXBZLJN3.js"
 	},
-	"/assets/styles-V1B0A6nB.css": {
+	"/assets/routes-cjLfia5r.js": {
+		"type": "text/javascript; charset=utf-8",
+		"etag": "\"1f31-C6fGC5FiKBHN2B2q4ZZZVraYqd0\"",
+		"mtime": "2026-07-10T05:44:05.042Z",
+		"size": 7985,
+		"path": "../public/assets/routes-cjLfia5r.js"
+	},
+	"/assets/index-1sWF5sXN.js": {
+		"type": "text/javascript; charset=utf-8",
+		"etag": "\"59484-zB/uySq94cvPNPgJTADvWjEEF10\"",
+		"mtime": "2026-07-10T05:44:05.042Z",
+		"size": 365700,
+		"path": "../public/assets/index-1sWF5sXN.js"
+	},
+	"/assets/styles-B0UXBfE1.css": {
 		"type": "text/css; charset=utf-8",
-		"etag": "\"12825-PsKeSjpenKUsxbsgz+q6+j23d/I\"",
-		"mtime": "2026-07-10T05:37:19.076Z",
-		"size": 75813,
-		"path": "../public/assets/styles-V1B0A6nB.css"
+		"etag": "\"12bce-ttfCf3HaNjodzVNqYyhVfZe4190\"",
+		"mtime": "2026-07-10T05:44:05.043Z",
+		"size": 76750,
+		"path": "../public/assets/styles-B0UXBfE1.css"
 	}
 };
 //#endregion
