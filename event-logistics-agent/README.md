@@ -194,6 +194,37 @@ The agent now declines the off-topic request — the Prompt Decorator guardrail 
 
 ---
 
+## External Hosting & Instrumentation Guide
+
+If you wish to host the agent externally (outside the platform) and connect it back for observability and tracing, follow these steps to instrument it:
+
+### Step 1: Install AMP Instrumentation Package
+Install the AMP instrumentation package in your python environment:
+```bash
+pip install amp-instrumentation
+```
+This package provides the ability to instrument your agent and export traces.
+
+### Step 2: Generate API Key
+1. Go to settings and generate an API key.
+2. Select a Token Duration (e.g., `8760h`).
+3. Copy the generated token immediately as it won't be shown again.
+
+### Step 3: Set Environment Variables
+Set the agent endpoint and agent-specific API key so traces can be exported securely:
+```bash
+export AMP_OTEL_ENDPOINT="http://default-default.gateway.localhost:19080/otel"
+export AMP_AGENT_API_KEY="<your-generated-amp-agent-api-key>"
+```
+
+### Step 4: Run Agent with Instrumentation Enabled
+Run your agent's start command wrapped with `amp-instrument`. For example:
+```bash
+amp-instrument python main.py
+```
+
+---
+
 ## File Structure
 
 ```

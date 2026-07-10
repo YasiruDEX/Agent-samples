@@ -1,6 +1,6 @@
 import { useSettings } from "@/lib/settings-context";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, RotateCcw } from "@wso2/oxygen-ui-icons-react";
+import { Check, RotateCcw, Eye, EyeOff } from "@wso2/oxygen-ui-icons-react";
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -12,6 +12,8 @@ import {
   Typography,
   Stack,
   Alert,
+  IconButton,
+  InputAdornment,
 } from "@wso2/oxygen-ui";
 
 export const Route = createFileRoute("/settings")({
@@ -35,6 +37,7 @@ function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   type SavedSettings = {
     apiUrl: string;
@@ -119,8 +122,21 @@ function SettingsPage() {
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   placeholder="sk-..."
-                  type="password"
+                  type={showKey ? "text" : "password"}
                   fullWidth
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle api key visibility"
+                          onClick={() => setShowKey(!showKey)}
+                          edge="end"
+                        >
+                          {showKey ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
 
                 <TextField
