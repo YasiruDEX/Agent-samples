@@ -1,9 +1,6 @@
-# Google Maps Agent — Outdoor Event Logistics Pipeline
+# Event Logistics Agent
 
-A FastAPI service combining two capabilities:
-
-1. **`/chat`** — Original OpenAI + Google Maps MCP general-purpose assistant (unchanged)
-2. **`/analyze`** — LangGraph multi-agent pipeline for **Outdoor Event & Wedding Logistics** risk assessment
+A FastAPI service exposing a LangGraph multi-agent pipeline for **Outdoor Event & Wedding Logistics** risk assessment, integrating Google Maps MCP and weather services.
 
 ---
 
@@ -92,18 +89,6 @@ curl -X POST http://localhost:9099/analyze \
   -d '{"query":"Assess Pelican Hill Resort, Newport Beach for an outdoor wedding on October 14, 2026"}'
 ```
 
-**Response fields:**
-
-| Field | Description |
-|---|---|
-| `risk_analysis` | Full LLM-generated risk narrative |
-| `venue_address` | Extracted venue name |
-| `event_date` | Extracted date (YYYY-MM-DD) |
-| `resolved_lat` / `resolved_lon` | Geocoded coordinates |
-| `maps_data` | Hotels, parking, accessibility summary |
-| `weather_data` | OpenWeather 4.0 parsed payload |
-| `full_report` | Formatted final report with headers |
-
 ### `GET /health` — Health Check
 
 ```bash
@@ -116,12 +101,15 @@ OpenAPI UI at `http://localhost:9099/docs`
 
 ---
 
-## Standalone CLI Test
+## UI Dashboard
 
-Test the pipeline without the HTTP server:
+The UI client is located in the `ui` folder. It is a React application built with TanStack Start, styled using the WSO2 Oxygen UI components.
+
+To run the UI dev server:
 
 ```bash
-python langgraph_pipeline.py
+cd ui
+npm run dev
 ```
 
 ---
@@ -129,10 +117,12 @@ python langgraph_pipeline.py
 ## File Structure
 
 ```
-google-maps-agent/
-├── main.py                  # FastAPI app — /chat, /analyze, /health
-├── langgraph_pipeline.py    # LangGraph multi-agent pipeline
+event-logistics-agent/
+├── main.py                  # Entrypoint runner
+├── app.py                   # FastAPI server setup
 ├── requirements.txt
 ├── .env
-└── openapi.yaml
+├── openapi.yaml
+├── ui/                      # React frontend client
+└── agent/                   # LangGraph pipeline components
 ```

@@ -39,18 +39,17 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger("google-maps-agent")
+logger = logging.getLogger("event-logistics-agent")
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="Google Maps Agent + Event Logistics Pipeline",
+    title="Event Logistics Agent",
     description=(
-        "Exposes two capabilities: (1) a general-purpose Google Maps MCP chat agent "
-        "and (2) a LangGraph multi-agent pipeline for outdoor event & wedding logistics "
-        "risk assessment."
+        "Exposes a LangGraph multi-agent pipeline for outdoor event & wedding logistics "
+        "risk assessment, integrating Google Maps MCP and weather services."
     ),
     version="2.0.0",
 )

@@ -1,7 +1,7 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-D8fJCPZS.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-Djo7kaLO.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
-		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/agent-sample-tester/src/routes/__root.tsx",
+		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/event-logistics-agent/ui/src/routes/__root.tsx",
 		children: [
 			"/",
 			"/settings",
@@ -22,12 +22,12 @@ var tsrStartManifest = () => ({ routes: {
 		} }]
 	},
 	"/": {
-		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/agent-sample-tester/src/routes/index.tsx",
+		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/event-logistics-agent/ui/src/routes/index.tsx",
 		children: void 0,
 		preloads: ["/assets/routes-C2mn0IvT.js"]
 	},
 	"/settings": {
-		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/agent-sample-tester/src/routes/settings.tsx",
+		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/event-logistics-agent/ui/src/routes/settings.tsx",
 		children: void 0,
 		preloads: ["/assets/settings-CJxtfIHq.js"]
 	}

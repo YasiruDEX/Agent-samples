@@ -1,23 +1,52 @@
+# ==========================================
+# Environments & Secrets (Crucial)
+# ==========================================
+.env
+.env.*
+!.env.example
+*.local
+
+# ==========================================
+# Project Specific Exclusions
+# # ==========================================
 jwt-openai-agent/test_endpoint.py
+event-logistics-agent/ui/commands/
 
-*.env
-**/.env
-**/.venv
-*/venv
-
+# ==========================================
+# Node / JavaScript Dependencies
+# # ==========================================
 node_modules/
-agent-sample-tester/commands
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# Byte-compiled / optimized / DLL files
+# ==========================================
+# Python Virtual Environments
+# # ==========================================
+.venv/
+venv/
+ENV/
+env/
+Pipfile.lock
+poetry.lock
+
+# ==========================================
+# Python Byte-compiled / Cache files
+# # ==========================================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
-# Virtual environment (looks like you are using .venv)
-.venv/
-venv/
-ENV/
-
-# Environment variables (secret API keys)
-.env
+# ==========================================
+# OS & IDE Files (Optional but Recommended)
+# # ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+event-logistics-agent/ui/commands
