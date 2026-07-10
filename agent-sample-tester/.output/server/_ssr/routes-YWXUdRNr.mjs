@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { n as useSettings } from "./settings-context-D9YD2z_W.mjs";
 import { i as Send, n as Sparkles, t as User } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-UbwY8rRP.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-YWXUdRNr.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var SESSION_ID_STORAGE_KEY = "agent-sample-tester:session-id";
@@ -60,14 +60,20 @@ function extractText(data) {
 	}
 	return JSON.stringify(data);
 }
+var CHAT_MESSAGES_STORAGE_KEY = "agent-sample-tester:chat-messages";
 function ChatPage() {
 	const { apiUrl, apiKey, apiHeader } = useSettings();
-	const [messages, setMessages] = (0, import_react.useState)([]);
+	const [messages, setMessages] = (0, import_react.useState)(loadMessagesFromStorage);
 	const [input, setInput] = (0, import_react.useState)("");
 	const [loading, setLoading] = (0, import_react.useState)(false);
 	const [error, setError] = (0, import_react.useState)(null);
 	const scrollRef = (0, import_react.useRef)(null);
 	const inputRef = (0, import_react.useRef)(null);
+	(0, import_react.useEffect)(() => {
+		try {
+			window.localStorage.setItem(CHAT_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+		} catch {}
+	}, [messages]);
 	(0, import_react.useEffect)(() => {
 		scrollRef.current?.scrollTo({
 			top: scrollRef.current.scrollHeight,

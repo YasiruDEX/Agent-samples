@@ -18,44 +18,44 @@ var public_assets_data_default = {
 	"/favicon.ico": {
 		"type": "image/vnd.microsoft.icon",
 		"etag": "\"4f95-3RXc3p2mhEAs1WBwaIvE0Y0uu0Y\"",
-		"mtime": "2026-07-10T05:56:46.863Z",
+		"mtime": "2026-07-10T06:17:24.445Z",
 		"size": 20373,
 		"path": "../public/favicon.ico"
 	},
 	"/favicon.svg": {
 		"type": "image/svg+xml",
 		"etag": "\"2a1-zQG6fsAzXxG6uamCoFZjhCaMVYo\"",
-		"mtime": "2026-07-10T05:56:46.863Z",
+		"mtime": "2026-07-10T06:17:24.445Z",
 		"size": 673,
 		"path": "../public/favicon.svg"
 	},
-	"/assets/settings-DOQOc1uK.js": {
+	"/assets/index-CXn5ZpgG.js": {
 		"type": "text/javascript; charset=utf-8",
-		"etag": "\"12f3-nahOFF6qWZRwvjHmvWQrZwejFQc\"",
-		"mtime": "2026-07-10T05:56:46.706Z",
-		"size": 4851,
-		"path": "../public/assets/settings-DOQOc1uK.js"
-	},
-	"/assets/index-CaYbJrZs.js": {
-		"type": "text/javascript; charset=utf-8",
-		"etag": "\"5933b-wNX9StFMLqb2QNFDq5vmhlGQ8ak\"",
-		"mtime": "2026-07-10T05:56:46.706Z",
+		"etag": "\"5933b-Gbxb5bqGSUKXLb7K3rSQDbVSnlM\"",
+		"mtime": "2026-07-10T06:17:24.299Z",
 		"size": 365371,
-		"path": "../public/assets/index-CaYbJrZs.js"
+		"path": "../public/assets/index-CXn5ZpgG.js"
 	},
-	"/assets/routes-D_zfAF4_.js": {
-		"type": "text/javascript; charset=utf-8",
-		"etag": "\"1fde-opX4iRWhXmM5S1dKXBKJI/IQxCo\"",
-		"mtime": "2026-07-10T05:56:46.706Z",
-		"size": 8158,
-		"path": "../public/assets/routes-D_zfAF4_.js"
-	},
-	"/assets/styles-BgqC4kEz.css": {
+	"/assets/styles-DUm7AIim.css": {
 		"type": "text/css; charset=utf-8",
-		"etag": "\"1359c-gLfbEJ8RvQPRopW232XNd1L4oPM\"",
-		"mtime": "2026-07-10T05:56:46.707Z",
-		"size": 79260,
-		"path": "../public/assets/styles-BgqC4kEz.css"
+		"etag": "\"13561-imKr3GejEOK56z5yw8lyZ3CaD6s\"",
+		"mtime": "2026-07-10T06:17:24.299Z",
+		"size": 79201,
+		"path": "../public/assets/styles-DUm7AIim.css"
+	},
+	"/assets/routes-CGsRRY_H.js": {
+		"type": "text/javascript; charset=utf-8",
+		"etag": "\"2071-GPv5HS6FM/jy4tVp4vAzSCt+Y6U\"",
+		"mtime": "2026-07-10T06:17:24.299Z",
+		"size": 8305,
+		"path": "../public/assets/routes-CGsRRY_H.js"
+	},
+	"/assets/settings-Bz-7OEj_.js": {
+		"type": "text/javascript; charset=utf-8",
+		"etag": "\"12f3-CyzwtEldzIMtjSOTkJ7/nnQdSAY\"",
+		"mtime": "2026-07-10T06:17:24.299Z",
+		"size": 4851,
+		"path": "../public/assets/settings-Bz-7OEj_.js"
 	}
 };
 //#endregion

@@ -4,6 +4,34 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Send, Sparkles, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+const CHAT_MESSAGES_STORAGE_KEY = "agent-sample-tester:chat-messages";
+
+function loadMessagesFromStorage(): ChatMessage[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(CHAT_MESSAGES_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter(isChatMessage);
+  } catch {
+    return [];
+  }
+}
+
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== "object") return false;
+
+  const message = value as Record<string, unknown>;
+  return (
+    (message.role === "user" || message.role === "assistant" || message.role === "system") &&
+    typeof message.content === "string"
+  );
+}
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -19,12 +47,20 @@ export const Route = createFileRoute("/")({
 
 function ChatPage() {
   const { apiUrl, apiKey, apiHeader } = useSettings();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadMessagesFromStorage);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CHAT_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+    } catch {
+      // Ignore storage failures and keep the chat functional.
+    }
+  }, [messages]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
