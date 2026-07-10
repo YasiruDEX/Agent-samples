@@ -1,8 +1,8 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { n as useSettings } from "./settings-context-Cy0u4pAg.mjs";
+import { n as useSettings } from "./settings-context-D9YD2z_W.mjs";
 import { i as Send, n as Sparkles, t as User } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DlD_F5Dl.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-UbwY8rRP.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var SESSION_ID_STORAGE_KEY = "agent-sample-tester:session-id";
@@ -166,7 +166,7 @@ function EmptyState() {
 		className: "mx-auto mt-16 flex max-w-md flex-col items-center text-center",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "flex h-14 w-14 items-center justify-center rounded-2xl btn-gradient",
+				className: "flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_0_32px_-18px_rgba(255,255,255,0.85)] backdrop-blur-sm",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "h-6 w-6 text-white" })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
@@ -309,7 +309,7 @@ function TypingIndicator() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "flex gap-3",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "flex h-8 w-8 items-center justify-center rounded-lg btn-gradient",
+			className: "flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 shadow-[0_0_24px_-16px_rgba(255,255,255,0.85)] backdrop-blur-sm",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "h-4 w-4 text-white" })
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "flex items-center gap-1.5 rounded-2xl bg-card px-4 py-3 ring-1 ring-border",
@@ -323,7 +323,7 @@ function TypingIndicator() {
 }
 function Dot({ delay }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-		className: "h-1.5 w-1.5 animate-bounce rounded-full bg-primary",
+		className: "h-1.5 w-1.5 animate-bounce rounded-full bg-white/80",
 		style: { animationDelay: delay }
 	});
 }

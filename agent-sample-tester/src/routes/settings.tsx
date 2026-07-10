@@ -22,6 +22,14 @@ function SettingsPage() {
   const [key, setKey] = useState(apiKey);
   const [header, setHeader] = useState(apiHeader);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  type SavedSettings = {
+    apiUrl: string;
+    apiKey: string;
+    apiHeader: string;
+  };
 
   useEffect(() => {
     setUrl(apiUrl);
@@ -29,15 +37,43 @@ function SettingsPage() {
     setHeader(apiHeader);
   }, [apiUrl, apiKey, apiHeader]);
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
-    updateSettings({
+
+    setSaving(true);
+    setError(null);
+
+    const nextSettings = {
       apiUrl: url.trim() || defaults.apiUrl,
       apiKey: key.trim(),
       apiHeader: header.trim() || defaults.apiHeader,
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+    };
+
+    try {
+      const response = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextSettings),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = (await response.json()) as { settings?: SavedSettings };
+      const savedSettings = data.settings ?? nextSettings;
+
+      updateSettings(savedSettings);
+      setUrl(savedSettings.apiUrl);
+      setKey(savedSettings.apiKey);
+      setHeader(savedSettings.apiHeader);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -45,8 +81,8 @@ function SettingsPage() {
       <div className="mx-auto w-full max-w-2xl px-4 py-10 md:px-6">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Override the agent endpoint, API key, and request header name. Values are stored in your
-          browser and take precedence over environment defaults.
+          Override the agent endpoint, API key, and request header name. Values are saved to the
+          local .env file and take precedence over any runtime defaults.
         </p>
 
         <form onSubmit={save} className="mt-8 space-y-6 rounded-2xl border border-border bg-card p-6">
@@ -91,27 +127,55 @@ function SettingsPage() {
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               type="submit"
-              className="btn-gradient inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-semibold"
+              disabled={saving}
+              className="btn-gradient inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saved ? <Check className="h-4 w-4 text-white" /> : null}
-              {saved ? "Saved" : "Save changes"}
+              {saving ? "Saving..." : saved ? "Saved" : "Save changes"}
             </button>
             <button
               type="button"
-              onClick={() => {
-                reset();
-                setSaved(false);
+              onClick={async () => {
+                setSaving(true);
+                setError(null);
+                try {
+                  const response = await fetch("/api/settings", { method: "DELETE" });
+                  if (!response.ok) {
+                    throw new Error(await response.text());
+                  }
+
+                    const data = (await response.json()) as { settings?: SavedSettings };
+                    const resetSettings = data.settings ?? {
+                      apiUrl: defaults.apiUrl,
+                      apiKey: defaults.apiKey,
+                      apiHeader: defaults.apiHeader,
+                    };
+
+                  reset();
+                    updateSettings(resetSettings);
+                    setUrl(resetSettings.apiUrl);
+                    setKey(resetSettings.apiKey);
+                    setHeader(resetSettings.apiHeader);
+                  setSaved(false);
+                } catch (resetError) {
+                  setError(resetError instanceof Error ? resetError.message : "Failed to reset settings");
+                } finally {
+                  setSaving(false);
+                }
               }}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent"
+              disabled={saving}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-70"
             >
               <RotateCcw className="h-4 w-4" />
               Reset to defaults
             </button>
           </div>
+
+          {error ? <div className="text-sm text-red-600">{error}</div> : null}
         </form>
 
         <div className="mt-6 rounded-xl border border-border/70 bg-muted/30 p-4 text-xs text-muted-foreground">
-          <div className="font-semibold text-foreground">Environment defaults</div>
+          <div className="font-semibold text-foreground">Local .env values</div>
           <div className="mt-2 font-mono">AGENT_URL = {defaults.apiUrl || "(unset)"}</div>
           <div className="font-mono">AGENT_API_KEY = {defaults.apiKey ? "••••••" : "(unset)"}</div>
           <div className="font-mono">AGENT_API_HEADER = {defaults.apiHeader || "(unset)"}</div>

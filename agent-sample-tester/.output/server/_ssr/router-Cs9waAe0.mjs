@@ -1,16 +1,16 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { _ as useRouter, c as HeadContent, d as createRouter, f as Outlet, g as Link, h as createRootRouteWithContext, l as useLocation, m as createFileRoute, p as lazyRouteComponent, s as Scripts } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as readAgentSettings, r as writeAgentSettings, t as clearAgentSettings } from "./agent-settings.server-0KsaK8Ql.mjs";
 import { i as require_react, n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-import { t as SettingsProvider } from "./settings-context-Cy0u4pAg.mjs";
+import { t as SettingsProvider } from "./settings-context-D9YD2z_W.mjs";
 import { n as Sparkles, o as MessageSquare, r as Settings } from "../_libs/lucide-react.mjs";
 import { t as createOpenAICompatible } from "../_libs/ai-sdk__openai-compatible.mjs";
 import { t as generateText } from "../_libs/ai.mjs";
-import processModule from "node:process";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-JFyiozVa.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-Cs9waAe0.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-var styles_default = "/assets/styles-B0UXBfE1.css";
+var styles_default = "/assets/styles-BgqC4kEz.css";
 var NAV = [{
 	to: "/",
 	label: "Chat",
@@ -30,7 +30,7 @@ function AppShell() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex h-16 items-center gap-3 border-b border-sidebar-border px-5",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "flex h-9 w-9 items-center justify-center rounded-lg btn-gradient",
+						className: "flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 shadow-[0_0_32px_-18px_rgba(255,255,255,0.85)] backdrop-blur-sm",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "h-5 w-5 text-white" })
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "leading-tight",
@@ -71,7 +71,7 @@ function AppShell() {
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "flex items-center gap-3 md:hidden",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "flex h-8 w-8 items-center justify-center rounded-md btn-gradient",
+								className: "flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-white/10 shadow-[0_0_28px_-16px_rgba(255,255,255,0.85)] backdrop-blur-sm",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "h-4 w-4 text-white" })
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								className: "text-sm font-semibold",
@@ -114,17 +114,14 @@ function AppShell() {
 	});
 }
 function SplashScreen({ visible }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background transition-opacity duration-500 " + (visible ? "opacity-100" : "opacity-0"),
 		"aria-hidden": !visible,
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "pointer-events-none absolute inset-0 opacity-40",
-			style: { background: "radial-gradient(600px circle at 50% 40%, color-mix(in oklab, var(--primary) 35%, transparent), transparent 60%)" }
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "relative flex flex-col items-center",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "relative flex h-20 w-20 items-center justify-center rounded-2xl btn-gradient animate-pulse",
+					className: "relative flex h-20 w-20 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_0_36px_-16px_rgba(255,255,255,0.9)] backdrop-blur-sm animate-pulse",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "h-10 w-10 text-white" })
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -134,19 +131,19 @@ function SplashScreen({ visible }) {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-3 flex gap-1.5",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "h-2 w-2 animate-bounce rounded-full bg-primary" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "h-2 w-2 animate-bounce rounded-full bg-white/90" }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "h-2 w-2 animate-bounce rounded-full bg-primary",
+							className: "h-2 w-2 animate-bounce rounded-full bg-white/90",
 							style: { animationDelay: "150ms" }
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "h-2 w-2 animate-bounce rounded-full bg-primary",
+							className: "h-2 w-2 animate-bounce rounded-full bg-white/90",
 							style: { animationDelay: "300ms" }
 						})
 					]
 				})
 			]
-		})]
+		})
 	});
 }
 function NotFoundComponent() {
@@ -214,7 +211,7 @@ function ErrorComponent({ error, reset }) {
 		})
 	});
 }
-var Route$3 = createRootRouteWithContext()({
+var Route$4 = createRootRouteWithContext()({
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
@@ -289,7 +286,7 @@ function RootShell({ children }) {
 	});
 }
 function RootComponent() {
-	const { queryClient } = Route$3.useRouteContext();
+	const { queryClient } = Route$4.useRouteContext();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(QueryClientProvider, {
 		client: queryClient,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SettingsProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SplashGate, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppShell, {}) }) })
@@ -308,22 +305,48 @@ function SplashGate({ children }) {
 	}, []);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [children, mountSplash && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SplashScreen, { visible: showSplash })] });
 }
-var $$splitComponentImporter$1 = () => import("./settings-rWpMGB-T.mjs");
-var Route$2 = createFileRoute("/settings")({
+var $$splitComponentImporter$1 = () => import("./settings-DilruN3-.mjs");
+var Route$3 = createFileRoute("/settings")({
 	head: () => ({ meta: [{ title: "Settings · Agent Testing Workspace" }, {
 		name: "description",
 		content: "Configure your agent API endpoint, key, and request header."
 	}] }),
 	component: lazyRouteComponent($$splitComponentImporter$1, "component")
 });
-var $$splitComponentImporter = () => import("./routes-DlD_F5Dl.mjs");
-var Route$1 = createFileRoute("/")({
+var $$splitComponentImporter = () => import("./routes-UbwY8rRP.mjs");
+var Route$2 = createFileRoute("/")({
 	head: () => ({ meta: [{ title: "Conversation · Agent Testing Workspace" }, {
 		name: "description",
 		content: "Talk to your AI agent from a clean, focused chat interface."
 	}] }),
 	component: lazyRouteComponent($$splitComponentImporter, "component")
 });
+var Route$1 = createFileRoute("/api/settings")({ server: { handlers: {
+	POST: async ({ request }) => {
+		let body;
+		try {
+			body = await request.json();
+		} catch {
+			return new Response("Invalid JSON body", { status: 400 });
+		}
+		await writeAgentSettings({
+			apiUrl: body.apiUrl?.trim() || "/api/chat",
+			apiKey: body.apiKey?.trim() || "",
+			apiHeader: body.apiHeader?.trim() || "Authorization"
+		});
+		return Response.json({
+			ok: true,
+			settings: await readAgentSettings()
+		});
+	},
+	DELETE: async () => {
+		await clearAgentSettings();
+		return Response.json({
+			ok: true,
+			settings: await readAgentSettings()
+		});
+	}
+} } });
 function createGatewayProvider(apiKey) {
 	return createOpenAICompatible({
 		name: "agent-gateway",
@@ -343,7 +366,7 @@ var Route = createFileRoute("/api/chat")({ server: { handlers: { POST: async ({ 
 		content: body.message.trim()
 	}] : void 0);
 	if (!Array.isArray(messages) || messages.length === 0) return new Response("messages array is required", { status: 400 });
-	const key = processModule.env.AGENT_API_KEY ?? processModule.env.LOVABLE_API_KEY;
+	const { apiKey: key } = await readAgentSettings();
 	if (!key) return new Response("Missing agent API key on server", { status: 500 });
 	try {
 		const { text } = await generateText({
@@ -363,25 +386,32 @@ var Route = createFileRoute("/api/chat")({ server: { handlers: { POST: async ({ 
 		return new Response(message, { status: 500 });
 	}
 } } } });
-var SettingsRoute = Route$2.update({
+var SettingsRoute = Route$3.update({
 	id: "/settings",
 	path: "/settings",
-	getParentRoute: () => Route$3
+	getParentRoute: () => Route$4
+});
+var IndexRoute = Route$2.update({
+	id: "/",
+	path: "/",
+	getParentRoute: () => Route$4
+});
+var ApiSettingsRoute = Route$1.update({
+	id: "/api/settings",
+	path: "/api/settings",
+	getParentRoute: () => Route$4
 });
 var rootRouteChildren = {
-	IndexRoute: Route$1.update({
-		id: "/",
-		path: "/",
-		getParentRoute: () => Route$3
-	}),
+	IndexRoute,
 	SettingsRoute,
 	ApiChatRoute: Route.update({
 		id: "/api/chat",
 		path: "/api/chat",
-		getParentRoute: () => Route$3
-	})
+		getParentRoute: () => Route$4
+	}),
+	ApiSettingsRoute
 };
-var routeTree = Route$3._addFileChildren(rootRouteChildren)._addFileTypes();
+var routeTree = Route$4._addFileChildren(rootRouteChildren)._addFileTypes();
 var getRouter = () => {
 	return createRouter({
 		routeTree,

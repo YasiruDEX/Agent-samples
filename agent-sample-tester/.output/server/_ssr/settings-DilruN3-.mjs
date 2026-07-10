@@ -1,8 +1,8 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { n as useSettings } from "./settings-context-Cy0u4pAg.mjs";
+import { n as useSettings } from "./settings-context-D9YD2z_W.mjs";
 import { a as RotateCcw, s as Check } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/settings-rWpMGB-T.js
+//#region node_modules/.nitro/vite/services/ssr/assets/settings-DilruN3-.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function SettingsPage() {
@@ -11,6 +11,8 @@ function SettingsPage() {
 	const [key, setKey] = (0, import_react.useState)(apiKey);
 	const [header, setHeader] = (0, import_react.useState)(apiHeader);
 	const [saved, setSaved] = (0, import_react.useState)(false);
+	const [error, setError] = (0, import_react.useState)(null);
+	const [saving, setSaving] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
 		setUrl(apiUrl);
 		setKey(apiKey);
@@ -20,15 +22,34 @@ function SettingsPage() {
 		apiKey,
 		apiHeader
 	]);
-	function save(e) {
+	async function save(e) {
 		e.preventDefault();
-		updateSettings({
+		setSaving(true);
+		setError(null);
+		const nextSettings = {
 			apiUrl: url.trim() || defaults.apiUrl,
 			apiKey: key.trim(),
 			apiHeader: header.trim() || defaults.apiHeader
-		});
-		setSaved(true);
-		setTimeout(() => setSaved(false), 1500);
+		};
+		try {
+			const response = await fetch("/api/settings", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(nextSettings)
+			});
+			if (!response.ok) throw new Error(await response.text());
+			const savedSettings = (await response.json()).settings ?? nextSettings;
+			updateSettings(savedSettings);
+			setUrl(savedSettings.apiUrl);
+			setKey(savedSettings.apiKey);
+			setHeader(savedSettings.apiHeader);
+			setSaved(true);
+			setTimeout(() => setSaved(false), 1500);
+		} catch (saveError) {
+			setError(saveError instanceof Error ? saveError.message : "Failed to save settings");
+		} finally {
+			setSaving(false);
+		}
 	}
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "h-full overflow-y-auto",
@@ -41,7 +62,7 @@ function SettingsPage() {
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-1 text-sm text-muted-foreground",
-					children: "Override the agent endpoint, API key, and request header name. Values are stored in your browser and take precedence over environment defaults."
+					children: "Override the agent endpoint, API key, and request header name. Values are saved to the local .env file and take precedence over any runtime defaults."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
 					onSubmit: save,
@@ -91,18 +112,43 @@ function SettingsPage() {
 							className: "flex flex-wrap items-center gap-3 pt-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 								type: "submit",
-								className: "btn-gradient inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-semibold",
-								children: [saved ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, { className: "h-4 w-4 text-white" }) : null, saved ? "Saved" : "Save changes"]
+								disabled: saving,
+								className: "btn-gradient inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70",
+								children: [saved ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, { className: "h-4 w-4 text-white" }) : null, saving ? "Saving..." : saved ? "Saved" : "Save changes"]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 								type: "button",
-								onClick: () => {
-									reset();
-									setSaved(false);
+								onClick: async () => {
+									setSaving(true);
+									setError(null);
+									try {
+										const response = await fetch("/api/settings", { method: "DELETE" });
+										if (!response.ok) throw new Error(await response.text());
+										const resetSettings = (await response.json()).settings ?? {
+											apiUrl: defaults.apiUrl,
+											apiKey: defaults.apiKey,
+											apiHeader: defaults.apiHeader
+										};
+										reset();
+										updateSettings(resetSettings);
+										setUrl(resetSettings.apiUrl);
+										setKey(resetSettings.apiKey);
+										setHeader(resetSettings.apiHeader);
+										setSaved(false);
+									} catch (resetError) {
+										setError(resetError instanceof Error ? resetError.message : "Failed to reset settings");
+									} finally {
+										setSaving(false);
+									}
 								},
-								className: "inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent",
+								disabled: saving,
+								className: "inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-70",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, { className: "h-4 w-4" }), "Reset to defaults"]
 							})]
-						})
+						}),
+						error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-sm text-red-600",
+							children: error
+						}) : null
 					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -110,7 +156,7 @@ function SettingsPage() {
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "font-semibold text-foreground",
-							children: "Environment defaults"
+							children: "Local .env values"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "mt-2 font-mono",

@@ -20,7 +20,7 @@ export function AppShell() {
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg btn-gradient">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 shadow-[0_0_32px_-18px_rgba(255,255,255,0.85)] backdrop-blur-sm">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div className="leading-tight">
@@ -61,7 +61,7 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/60 px-4 backdrop-blur md:px-6">
           <div className="flex items-center gap-3 md:hidden">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md btn-gradient">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-white/10 shadow-[0_0_28px_-16px_rgba(255,255,255,0.85)] backdrop-blur-sm">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <div className="text-sm font-semibold">Agent Testing Workspace</div>

@@ -1,4 +1,5 @@
 import { createGatewayProvider } from "@/lib/ai-gateway.server";
+import { readAgentSettings } from "@/lib/agent-settings.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { generateText } from "ai";
 
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("messages array is required", { status: 400 });
         }
 
-        const key = process.env.AGENT_API_KEY ?? process.env.LOVABLE_API_KEY;
+        const { apiKey: key } = await readAgentSettings();
         if (!key) {
           return new Response("Missing agent API key on server", { status: 500 });
         }
