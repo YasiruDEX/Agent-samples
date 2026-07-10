@@ -7,3 +7,17 @@ jwt-openai-agent/test_endpoint.py
 
 node_modules/
 agent-sample-tester/commands
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment (looks like you are using .venv)
+.venv/
+venv/
+ENV/
+
+# Environment variables (secret API keys)
+.env
