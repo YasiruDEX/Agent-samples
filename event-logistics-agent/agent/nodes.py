@@ -36,6 +36,15 @@ logger = logging.getLogger(__name__)
 
 
 def _llm(temperature: float = 0.0) -> ChatOpenAI:
+    if settings.use_llm_provider:
+        return ChatOpenAI(
+            base_url=settings.llm_provider_url,
+            api_key=settings.llm_provider_key,
+            model=settings.openai_model,
+            temperature=temperature,
+            timeout=settings.openai_timeout,
+            max_retries=settings.openai_max_retries,
+        )
     return ChatOpenAI(
         model=settings.openai_model,
         api_key=settings.openai_api_key,

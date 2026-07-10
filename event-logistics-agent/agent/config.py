@@ -12,6 +12,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # ── External LLM Provider (Agent Manager overrides) ───────────────────────
+    use_llm_provider: bool = Field(
+        default=False,
+        description="Whether to use an external LLM provider.",
+    )
+    llm_provider_url: str = Field(
+        default="",
+        description="The base URL of the external LLM provider.",
+    )
+    llm_provider_key: str = Field(
+        default="",
+        description="The API key for the external LLM provider.",
+    )
+
     # ── OpenAI ────────────────────────────────────────────────────────────────
     openai_api_key: str
     openai_model: str = "gpt-4o-mini"
