@@ -3,7 +3,7 @@ import { D as Typography, E as TextField, F as dist_exports, T as Stack, b as Pa
 import { o as require_react } from "../_libs/@emotion/react+[...].mjs";
 import { i as require_jsx_runtime } from "../_libs/@mui/private-theming+[...].mjs";
 import { t as Avatar } from "./Avatar-BGS3oTFu.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-C3Zx4woA.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-C0VKld3x.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var SESSION_ID_STORAGE_KEY = "agent-sample-tester:session-id";
@@ -76,17 +76,23 @@ function isChatMessage(value) {
 }
 function ChatPage() {
 	const { apiUrl, apiKey, apiHeader } = useSettings();
-	const [messages, setMessages] = (0, import_react.useState)(loadMessagesFromStorage);
+	const [messages, setMessages] = (0, import_react.useState)([]);
+	const [isLoaded, setIsLoaded] = (0, import_react.useState)(false);
 	const [input, setInput] = (0, import_react.useState)("");
 	const [loading, setLoading] = (0, import_react.useState)(false);
 	const [error, setError] = (0, import_react.useState)(null);
 	const scrollRef = (0, import_react.useRef)(null);
 	const inputRef = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
+		setMessages(loadMessagesFromStorage());
+		setIsLoaded(true);
+	}, []);
+	(0, import_react.useEffect)(() => {
+		if (!isLoaded) return;
 		try {
 			window.localStorage.setItem(CHAT_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
 		} catch {}
-	}, [messages]);
+	}, [messages, isLoaded]);
 	(0, import_react.useEffect)(() => {
 		scrollRef.current?.scrollTo({
 			top: scrollRef.current.scrollHeight,

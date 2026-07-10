@@ -59,7 +59,8 @@ export const Route = createFileRoute("/")({
 
 function ChatPage() {
   const { apiUrl, apiKey, apiHeader } = useSettings();
-  const [messages, setMessages] = useState<ChatMessage[]>(loadMessagesFromStorage);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,12 +68,18 @@ function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    setMessages(loadMessagesFromStorage());
+    setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
     try {
       window.localStorage.setItem(CHAT_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
     } catch {
       // Ignore storage failures and keep the chat functional.
     }
-  }, [messages]);
+  }, [messages, isLoaded]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

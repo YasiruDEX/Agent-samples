@@ -5,7 +5,7 @@ import { a as defaultSerovalPlugins, c as makeSerovalPlugin, d as lu, i as merge
 import { a as X_TSS_RAW_RESPONSE, d as getStartOptions, f as runWithStartContext, i as TSS_SERVER_FUNCTION, l as flattenMiddlewares, n as TSS_CONTENT_TYPE_FRAMED_VERSIONED, o as X_TSS_SERIALIZED, p as safeObjectMerge, r as TSS_FORMDATA_CONTEXT, s as createNullProtoObject, t as FrameType, u as getStartContext } from "./createServerFn-CIHAFgYl.mjs";
 import { o as require_react } from "../_libs/@emotion/react+[...].mjs";
 import { i as require_jsx_runtime } from "../_libs/@mui/private-theming+[...].mjs";
-import { t as createMiddleware } from "./createMiddleware-B_4t7rW1.mjs";
+import { t as createCsrfMiddleware } from "./createCsrfMiddleware-B2To0gPJ.mjs";
 import { n as toResponse, t as H3Event } from "../_libs/h3-v2+rou3.mjs";
 import processModule from "node:process";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -84,7 +84,7 @@ var HEADERS = { TSS_SHELL: "X-TSS_SHELL" };
 * the dev styles URL for route-scoped CSS collection.
 */
 async function getStartManifest(matchedRoutes) {
-	const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-BbsXE_q4.mjs");
+	const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-D8fJCPZS.mjs");
 	const startManifest = tsrStartManifest();
 	let routes = startManifest.routes;
 	routes[rootRouteId];
@@ -102,59 +102,6 @@ async function getStartManifest(matchedRoutes) {
 		...startManifest.inlineCss ? { inlineCss: startManifest.inlineCss } : {},
 		routes: manifestRoutes
 	};
-}
-var innerCreateCsrfMiddleware = (opts = {}) => {
-	return createMiddleware().server(async (ctx) => {
-		const csrfCtx = ctx;
-		if (opts.filter && !await opts.filter(csrfCtx)) return ctx.next();
-		if (await isCsrfRequestAllowed(opts, csrfCtx)) return ctx.next();
-		return getFailureResponse(opts, csrfCtx);
-	});
-};
-var createCsrfMiddleware = innerCreateCsrfMiddleware;
-async function isCsrfRequestAllowed(opts, ctx) {
-	const result = await getCsrfRequestValidationResult(opts, ctx);
-	return result === true || result === void 0 && opts.allowRequestsWithoutOriginCheck === true;
-}
-async function getCsrfRequestValidationResult(opts, ctx) {
-	const fetchSite = ctx.request.headers.get("Sec-Fetch-Site");
-	if (fetchSite !== null) return matchValue(opts.secFetchSite ?? "same-origin", fetchSite, ctx);
-	const origin = ctx.request.headers.get("Origin");
-	if (origin !== null) {
-		if (opts.origin) return matchValue(opts.origin, origin, ctx);
-		return origin === new URL(ctx.request.url).origin;
-	}
-	const referer = ctx.request.headers.get("Referer");
-	if (referer === null || opts.referer === false) return;
-	if (typeof opts.referer === "function") return opts.referer(referer, ctx);
-	if (opts.origin) {
-		const refererOrigin = getOriginFromUrl(referer);
-		return refererOrigin !== void 0 && matchValue(opts.origin, refererOrigin, ctx);
-	}
-	return isRefererSameOrigin(referer, new URL(ctx.request.url).origin);
-}
-async function matchValue(matcher, value, ctx) {
-	if (typeof matcher === "function") return matcher(value, ctx);
-	if (Array.isArray(matcher)) return matcher.includes(value);
-	return value === matcher;
-}
-function getOriginFromUrl(url) {
-	try {
-		return new URL(url).origin;
-	} catch {
-		return;
-	}
-}
-function isRefererSameOrigin(referer, requestOrigin) {
-	if (referer === requestOrigin) return true;
-	if (!referer.startsWith(requestOrigin)) return false;
-	if (referer.length === requestOrigin.length) return true;
-	const code = referer.charCodeAt(requestOrigin.length);
-	return code === 47 || code === 63 || code === 35;
-}
-async function getFailureResponse(opts, ctx) {
-	if (typeof opts.failureResponse === "function") return opts.failureResponse(ctx);
-	return opts.failureResponse?.clone() ?? new Response("Forbidden", { status: 403 });
 }
 function getDefaultSerovalPlugins() {
 	return [...(getStartOptions()?.serializationAdapters)?.map(makeSerovalPlugin) ?? [], ...defaultSerovalPlugins];
@@ -1080,8 +1027,8 @@ var getBaseManifest = getProdBaseManifest;
 var createEarlyHintsForRequest = createEarlyHintsCollector;
 async function loadEntries() {
 	const [routerEntry, startEntry, pluginAdapters] = await Promise.all([
-		import("./router-mpBM6wZr.mjs"),
-		import("./start-BcSBlhe9.mjs"),
+		import("./router-Bgz2kaoC.mjs"),
+		import("./start-Dm7wS3e7.mjs"),
 		import("./empty-plugin-adapters-D9UWiqvJ.mjs")
 	]);
 	return {

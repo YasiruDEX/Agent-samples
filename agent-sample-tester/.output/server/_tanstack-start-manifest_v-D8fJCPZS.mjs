@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-BbsXE_q4.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-D8fJCPZS.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/agent-sample-tester/src/routes/__root.tsx",
@@ -9,7 +9,7 @@ var tsrStartManifest = () => ({ routes: {
 			"/api/settings"
 		],
 		preloads: [
-			"/assets/index-DqFu-kIz.js",
+			"/assets/index-jFnz2RY9.js",
 			"/assets/rolldown-runtime-Bh1tDfsg.js",
 			"/assets/TextField-ODPARqm4.js",
 			"/assets/Avatar-RMj6R3nt.js",
@@ -18,13 +18,13 @@ var tsrStartManifest = () => ({ routes: {
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-DqFu-kIz.js"
+			src: "/assets/index-jFnz2RY9.js"
 		} }]
 	},
 	"/": {
 		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/agent-sample-tester/src/routes/index.tsx",
 		children: void 0,
-		preloads: ["/assets/routes-CiaG7Xra.js"]
+		preloads: ["/assets/routes-C2mn0IvT.js"]
 	},
 	"/settings": {
 		filePath: "/Users/yasirubasnayake/Documents/WSO2/Agent-samples/agent-sample-tester/src/routes/settings.tsx",
