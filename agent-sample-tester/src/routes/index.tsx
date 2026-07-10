@@ -1,7 +1,7 @@
 import { sendChat, type ChatMessage } from "@/lib/chat-api";
 import { useSettings } from "@/lib/settings-context";
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Sparkles, User } from "lucide-react";
+import { Send, Sparkles, User, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const CHAT_MESSAGES_STORAGE_KEY = "agent-sample-tester:chat-messages";
@@ -98,6 +98,20 @@ function ChatPage() {
 
   return (
     <div className="flex h-full flex-col">
+      {messages.length > 0 && (
+        <div className="flex justify-between items-center shrink-0 border-b border-border bg-background/50 px-4 py-2 backdrop-blur md:px-6">
+          <span className="text-xs text-muted-foreground">
+            {messages.length} message{messages.length === 1 ? "" : "s"}
+          </span>
+          <button
+            onClick={() => setMessages([])}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-accent transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Clear Chat
+          </button>
+        </div>
+      )}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 md:px-6">
           {messages.length === 0 && !loading && <EmptyState />}

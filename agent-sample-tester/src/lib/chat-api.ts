@@ -14,30 +14,21 @@ type SendOpts = {
 };
 
 export async function sendChat({
-  apiUrl,
-  apiKey,
-  apiHeader,
   messages,
   signal,
 }: SendOpts): Promise<string> {
+  // Always route through the internal /api/chat proxy so that the full
+  // conversation history is forwarded to the configured external agent.
+  // The proxy reads AGENT_URL / AGENT_API_KEY from the server-side .env file
+  // and attaches the correct auth header before calling the external agent.
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const lastUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+
   const body: Record<string, unknown> = {
     session_id: getSessionId(),
-    message: lastUserMessage,
     messages,
   };
 
-  if (apiKey) {
-    const headerName = (apiHeader || "Authorization").trim();
-    if (headerName.toLowerCase() === "authorization") {
-      headers[headerName] = `Bearer ${apiKey}`;
-    } else {
-      headers[headerName] = apiKey;
-    }
-  }
-
-  const res = await fetch(apiUrl, {
+  const res = await fetch("/api/chat", {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -80,6 +71,8 @@ function extractText(data: unknown): string {
   if (typeof obj.response === "string") return obj.response;
   if (typeof obj.content === "string") return obj.content;
   if (typeof obj.message === "string") return obj.message;
+  if (typeof obj.output === "string") return obj.output;
+  if (typeof obj.result === "string") return obj.result;
   if (Array.isArray(obj.choices) && obj.choices.length > 0) {
     const first = obj.choices[0] as Record<string, unknown>;
     const msg = first.message as Record<string, unknown> | undefined;
