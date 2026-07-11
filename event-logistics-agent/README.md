@@ -68,16 +68,28 @@ Fill in the agent creation form with these exact values:
 ### Step 3: Select Agent Interface
 Choose **"Chat Agent"** as the agent interface type.
 
-### Step 4: Configure Environment Variables
-Add the following environment variables in the create form:
+### Step 4: Configure MCP Proxy in Agent Manager
+To connect to the Google Maps MCP server, utilize the **MCP Proxies** feature in the Agent Manager:
+1. Navigate to **MCP Proxies** in the left sidebar of the Agent Manager dashboard.
+2. Click **Create Proxy** and enter:
+   - **MCP Proxy Endpoint URL**: `https://mapstools.googleapis.com/mcp`
+   - Under **Configure Authentication Header**:
+     - **Header**: `X-Goog-Api-Key`
+     - **Value**: `<your-google-maps-api-key>`
+3. Save the proxy. Go back to your agent configuration form, and under **MCP Proxies**, add the newly created proxy.
+
+This will automatically inject the following environment variables into your agent environment at runtime:
+- `AGENT_MCP_1_URL`
+- `AGENT_MCP_1_API_KEY`
+
+### Step 5: Configure Environment Variables
+Add the remaining environment variables in the create form:
 ```env
 OPENAI_API_KEY=<your-openai-api-key>
-AGENT_MCP_1_URL=https://mapstools.googleapis.com/mcp
-AGENT_MCP_1_API_KEY=<your-google-maps-api-key>
 OPENWEATHER_API_KEY=<your-openweather-api-key>
 ```
 
-### Step 5: Deploy the Agent
+### Step 6: Deploy the Agent
 1. Review all configuration details.
 2. Click **"Deploy"**.
 3. Wait for the build to complete (typically 6-10 minutes).
