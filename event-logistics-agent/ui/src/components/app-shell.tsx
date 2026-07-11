@@ -22,8 +22,8 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Chat", icon: <MessageSquare size={18} /> },
-  { to: "/settings", label: "Settings", icon: <SettingsIcon size={18} /> },
+  { to: "/", label: "Chat", icon: <MessageSquare size={24} /> },
+  { to: "/settings", label: "Settings", icon: <SettingsIcon size={24} /> },
 ];
 
 export function AppShell() {
@@ -45,17 +45,7 @@ export function AppShell() {
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ h: 64, height: 64, px: 3, borderBottom: "1px solid", borderColor: "divider" }}>
-          <Avatar
-            sx={{
-              width: 32,
-              height: 32,
-              bgcolor: "primary.main",
-              color: "white",
-              boxShadow: "0 0 16px -4px rgba(255,94,58,0.4)",
-            }}
-          >
-            <Sparkles size={16} />
-          </Avatar>
+          <img src="/favicon.svg" alt="Agent Manager Logo" width={32} height={32} />
           <Box>
             <Typography variant="body2" fontWeight="bold" noWrap>
               Agent Testing
@@ -143,9 +133,7 @@ export function AppShell() {
         >
           {/* Mobile view brand header */}
           <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { md: "none" } }}>
-            <Avatar sx={{ width: 28, height: 28, bgcolor: "primary.main", color: "white" }}>
-              <Sparkles size={14} />
-            </Avatar>
+            <img src="/favicon.svg" alt="Agent Manager Logo" width={28} height={28} />
             <Typography variant="body2" fontWeight="bold">
               Agent Tester
             </Typography>

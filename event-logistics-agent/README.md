@@ -90,14 +90,7 @@ OPENWEATHER_API_KEY=<your-openweather-api-key>
 Click on the **"Try It"** section on the left navigation of the Agent Manager dashboard.
 
 ### Step 2: Test Sample Interactions
-Try these sample queries in the chat interface. Each query exercises a different tool chain — visible in traces.
-
-**General Maps Query (Simple Chat Path):**
-```text
-Find some good sushi restaurants near the space needle in Seattle.
-```
-
-**Outdoor Event Analysis Query (LangGraph Pipeline Path):**
+Try these sample queries in the chat interface. **Outdoor Event Analysis Query:**
 ```text
 Assess Pelican Hill Resort, Newport Beach for an outdoor wedding on October 14, 2026.
 ```

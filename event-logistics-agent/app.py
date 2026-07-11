@@ -81,32 +81,13 @@ class ChatMessageInput(BaseModel):
 
 class ChatRequest(BaseModel):
     session_id: str
-    messages: list[ChatMessageInput]
+    message: str | None = None
+    messages: list[ChatMessageInput] | None = None
 
 
 class ChatResponse(BaseModel):
     response: str
 
-
-class AnalyzeRequest(BaseModel):
-    """
-    Free-form user query for the Event Logistics pipeline.
-
-    Example:
-        {"query": "Assess 'Pelican Hill Resort, Newport Beach' for October 14, 2026"}
-    """
-    query: str
-
-
-class AnalyzeResponse(BaseModel):
-    risk_analysis: str
-    venue_address: str
-    event_date: str
-    resolved_lat: float | None
-    resolved_lon: float | None
-    maps_data: dict
-    weather_data: dict
-    full_report: str
 
 
 # ---------------------------------------------------------------------------
@@ -255,42 +236,32 @@ async def _run_chat_loop(request: ChatRequest) -> str:
 # ---------------------------------------------------------------------------
 
 
-@app.post("/chat", response_model=ChatResponse, summary="Chat with the Google Maps MCP agent")
+@app.post("/chat", response_model=ChatResponse, summary="Outdoor Event Logistics Risk Assessment (LangGraph Pipeline)")
 async def chat(request: ChatRequest):
     """
-    General-purpose Google Maps assistant backed by OpenAI + MCP tools.
-    Use for directions, place searches, route planning, and general map queries.
+    Runs the full 4-node LangGraph pipeline for outdoor event & wedding logistics risk assessment.
+    Accepts conversation history and infers the last user message as the query.
     """
-    response = await _run_chat_loop(request)
-    return ChatResponse(response=response)
+    user_query = ""
+    if request.message:
+        user_query = request.message
+    elif request.messages:
+        for msg in reversed(request.messages):
+            if msg.role == "user":
+                user_query = msg.content
+                break
 
-
-@app.post(
-    "/analyze",
-    response_model=AnalyzeResponse,
-    summary="Outdoor Event Logistics Risk Assessment (LangGraph Pipeline)",
-)
-async def analyze(request: AnalyzeRequest):
-    """
-    Runs the full 4-node LangGraph pipeline:
-    - **supervisor_router** – extracts venue + date from the query
-    - **maps_node** – geocodes venue, finds hotels / parking / accessibility via Google Maps MCP
-    - **weather_node** – fetches OpenWeather 4.0 timeline data natively (no MCP)
-    - **risk_analyzer_node** – synthesises everything into a detailed risk report
-
-    Example query: *"Assess 'Pelican Hill Resort, Newport Beach' for October 14, 2026"*
-    """
-    if not request.query.strip():
+    if not user_query or not user_query.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Query must not be empty.",
+            detail="No user message found to analyze.",
         )
 
     graph = build_graph()
     try:
         final_state = await graph.ainvoke(
             {
-                "messages": [HumanMessage(content=request.query)],
+                "messages": [HumanMessage(content=user_query)],
                 "venue_address": "",
                 "event_date": "",
                 "resolved_lat": None,
@@ -314,16 +285,7 @@ async def analyze(request: AnalyzeRequest):
         "",
     )
 
-    return AnalyzeResponse(
-        risk_analysis=final_state.get("risk_analysis", ""),
-        venue_address=final_state.get("venue_address", ""),
-        event_date=final_state.get("event_date", ""),
-        resolved_lat=final_state.get("resolved_lat"),
-        resolved_lon=final_state.get("resolved_lon"),
-        maps_data=final_state.get("maps_data", {}),
-        weather_data=final_state.get("weather_data", {}),
-        full_report=full_report,
-    )
+    return ChatResponse(response=full_report)
 
 
 @app.get("/health", summary="Health check")
