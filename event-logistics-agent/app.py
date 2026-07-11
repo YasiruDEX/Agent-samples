@@ -20,7 +20,7 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from openai import AsyncOpenAI
@@ -257,11 +257,23 @@ async def chat(request: ChatRequest):
             detail="No user message found to analyze.",
         )
 
+    langchain_messages = []
+    if request.messages:
+        for msg in request.messages:
+            if msg.role == "user":
+                langchain_messages.append(HumanMessage(content=msg.content))
+            elif msg.role == "assistant":
+                langchain_messages.append(AIMessage(content=msg.content))
+            elif msg.role == "system":
+                langchain_messages.append(SystemMessage(content=msg.content))
+    elif request.message:
+        langchain_messages.append(HumanMessage(content=request.message))
+
     graph = build_graph()
     try:
         final_state = await graph.ainvoke(
             {
-                "messages": [HumanMessage(content=user_query)],
+                "messages": langchain_messages,
                 "venue_address": "",
                 "event_date": "",
                 "resolved_lat": None,

@@ -77,12 +77,23 @@ def supervisor_router(state: EventLogisticsState) -> EventLogisticsState:
         "",
     )
 
-    from datetime import datetime, timezone
+    # Clean intermediate agent status messages from the history sent to supervisor router
+    clean_history = []
+    for m in state["messages"]:
+        if isinstance(m, AIMessage):
+            content = m.content
+            if (content.startswith("Supervisor parsed:") or 
+                content.startswith("Maps analysis complete") or 
+                content.startswith("Weather data retrieved") or 
+                "Maps agent error" in content or 
+                "Weather agent error" in content or
+                content.startswith("Weather Error:") or 
+                content.startswith("Maps Error:")):
+                continue
+        clean_history.append(m)
+
     response = _llm(temperature=0.0).invoke(
-        [
-            SystemMessage(content=SUPERVISOR_SYSTEM_PROMPT),
-            HumanMessage(content=last_human),
-        ]
+        [SystemMessage(content=SUPERVISOR_SYSTEM_PROMPT)] + clean_history
     )
 
     raw = _strip_markdown_fences(response.content)
@@ -276,19 +287,36 @@ def risk_analyzer_node(state: EventLogisticsState) -> EventLogisticsState:
     venue_address = state.get("venue_address", "Unknown venue")
     event_date = state.get("event_date", "Unknown date")
 
-    user_prompt = RISK_ANALYZER_USER_PROMPT_TEMPLATE.format(
-        venue_address=venue_address,
-        event_date=event_date,
-        maps_data=json.dumps(maps_data, indent=2)[:5000],
-        weather_data=json.dumps(weather_data, indent=2)[:4000],
+    # Clean intermediate agent status messages from the history sent to risk analyzer
+    clean_history = []
+    for m in state["messages"]:
+        if isinstance(m, AIMessage):
+            content = m.content
+            if (content.startswith("Supervisor parsed:") or 
+                content.startswith("Maps analysis complete") or 
+                content.startswith("Weather data retrieved") or 
+                "Maps agent error" in content or 
+                "Weather agent error" in content or
+                content.startswith("Weather Error:") or 
+                content.startswith("Maps Error:")):
+                continue
+        clean_history.append(m)
+
+    context_content = (
+        f"Accumulated Event Intelligence:\n"
+        f"- Venue Name/Address: {venue_address}\n"
+        f"- Event Date: {event_date}\n"
+        f"- resolved_lat/lon: {state.get('resolved_lat')}, {state.get('resolved_lon')}\n\n"
+        f"Google Maps Data:\n{json.dumps(maps_data, indent=2)[:5000]}\n\n"
+        f"Weather Data:\n{json.dumps(weather_data, indent=2)[:4000]}\n"
     )
 
     try:
         response = _llm(temperature=0.3).invoke(
             [
                 SystemMessage(content=RISK_ANALYZER_SYSTEM_PROMPT),
-                HumanMessage(content=user_prompt),
-            ]
+                SystemMessage(content=context_content),
+            ] + clean_history
         )
         risk_report = response.content.strip()
     except Exception as exc:
@@ -297,14 +325,7 @@ def risk_analyzer_node(state: EventLogisticsState) -> EventLogisticsState:
 
     logger.info("[risk_analyzer_node] Report generated (%d chars).", len(risk_report))
 
-    full_report = (
-        f"# Outdoor Event Logistics Risk Assessment\n\n"
-        f"**Venue:** {venue_address}  \n"
-        f"**Event Date:** {event_date}\n\n"
-        f"{risk_report}"
-    )
-
     return {
-        "messages": [AIMessage(content=full_report)],
+        "messages": [AIMessage(content=risk_report)],
         "risk_analysis": risk_report,
     }
