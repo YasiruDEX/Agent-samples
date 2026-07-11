@@ -35,6 +35,7 @@ function SettingsPage() {
   const [key, setKey] = useState(apiKey);
   const [header, setHeader] = useState(apiHeader);
   const [saved, setSaved] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showKey, setShowKey] = useState(false);
@@ -81,8 +82,12 @@ function SettingsPage() {
       setUrl(savedSettings.apiUrl);
       setKey(savedSettings.apiKey);
       setHeader(savedSettings.apiHeader);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
+      setRestarting(true);
+      setTimeout(() => {
+        setRestarting(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      }, 3000);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Failed to save settings");
     } finally {
@@ -216,7 +221,12 @@ function SettingsPage() {
                         setUrl(resetSettings.apiUrl);
                         setKey(resetSettings.apiKey);
                         setHeader(resetSettings.apiHeader);
-                        setSaved(false);
+                        setRestarting(true);
+                        setTimeout(() => {
+                          setRestarting(false);
+                          setSaved(true);
+                          setTimeout(() => setSaved(false), 1500);
+                        }, 3000);
                       } catch (resetError) {
                         setError(
                           resetError instanceof Error ? resetError.message : "Failed to reset settings",
@@ -247,6 +257,47 @@ function SettingsPage() {
           </CardContent>
         </Card>
       </Container>
+
+      {restarting && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            bgcolor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              border: "4px solid rgba(255, 94, 58, 0.2)",
+              borderTop: "4px solid #ff5e3a",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+              mb: 3,
+              "@keyframes spin": {
+                "0%": { transform: "rotate(0deg)" },
+                "100%": { transform: "rotate(360deg)" },
+              },
+            }}
+          />
+          <Typography variant="h6" fontWeight="bold" sx={{ color: "white" }}>
+            Restarting application...
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mt: 1 }}>
+            Applying settings and reloading backend services.
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 }

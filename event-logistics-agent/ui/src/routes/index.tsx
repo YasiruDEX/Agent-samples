@@ -153,16 +153,23 @@ function ChatPage() {
           overflowY: "auto",
           p: { xs: 2, md: 3 },
           minHeight: 0,
+          display: messages.length === 0 && !loading ? "flex" : "block",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
         }}
       >
-        <Stack spacing={3} sx={{ maxWidth: "48rem", mx: "auto", width: "100%", py: 2 }}>
-          {messages.length === 0 && !loading && <EmptyState />}
-          {messages.map((m, i) => (
-            <MessageBubble key={i} message={m} />
-          ))}
-          {loading && <TypingIndicator />}
-          {error && <Alert severity="error">{error}</Alert>}
-        </Stack>
+        {messages.length === 0 && !loading ? (
+          <EmptyState />
+        ) : (
+          <Stack spacing={3} sx={{ maxWidth: "48rem", mx: "auto", width: "100%", py: 2 }}>
+            {messages.map((m, i) => (
+              <MessageBubble key={i} message={m} />
+            ))}
+            {loading && <TypingIndicator />}
+            {error && <Alert severity="error">{error}</Alert>}
+          </Stack>
+        )}
       </Box>
 
       <Box
