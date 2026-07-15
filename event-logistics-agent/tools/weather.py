@@ -48,7 +48,7 @@ from agent.config import settings
 logger = logging.getLogger(__name__)
 
 _OPENWEATHER_TIMEMACHINE_URL = (
-    "https://api.openweathermap.org/data/3.0/onecall/timemachine"
+    "https://api.openweathermap.org/data/2.5/weather"
 )
 
 
@@ -104,7 +104,34 @@ def _parse_weather_payload(payload: dict) -> dict:
     }
 
     parsed_points: list[dict] = []
-    for dp in payload.get("data", []):
+    
+    # Handle standard 2.5/weather format fallback
+    data_list = payload.get("data", [])
+    if not data_list and "weather" in payload:
+        main = payload.get("main", {})
+        sys = payload.get("sys", {})
+        wind = payload.get("wind", {})
+        clouds = payload.get("clouds", {})
+        
+        dp = {
+            "dt": payload.get("dt"),
+            "sunrise": sys.get("sunrise"),
+            "sunset": sys.get("sunset"),
+            "temp": main.get("temp"),
+            "feels_like": main.get("feels_like"),
+            "humidity": main.get("humidity"),
+            "wind_speed": wind.get("speed"),
+            "wind_gust": wind.get("gust"),
+            "clouds": clouds.get("all"),
+            "weather": payload.get("weather", []),
+            "rain": payload.get("rain", 0),
+            "snow": payload.get("snow", 0),
+            "pop": 0,
+            "visibility": payload.get("visibility"),
+        }
+        data_list = [dp]
+
+    for dp in data_list:
         rain_raw = dp.get("rain", 0)
         snow_raw = dp.get("snow", 0)
 
