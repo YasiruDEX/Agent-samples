@@ -1,13 +1,13 @@
 """
 tools/weather.py
 ----------------
-Native OpenWeather One Call API 4.0 integration tool.
+Native OpenWeather One Call API 3.0 integration tool.
 
 Provides fetch_weather_data(), an async function that calls the
 timemachine endpoint directly using httpx — NO MCP server required.
 
 API endpoint:
-  GET https://api.openweathermap.org/data/4.0/onecall/timemachine
+  GET https://api.openweathermap.org/data/3.0/onecall/timemachine
   Params: lat, lon, dt (unix UTC timestamp), appid, units=metric
 
 Response schema (relevant fields):
@@ -48,7 +48,7 @@ from agent.config import settings
 logger = logging.getLogger(__name__)
 
 _OPENWEATHER_TIMEMACHINE_URL = (
-    "https://api.openweathermap.org/data/4.0/onecall/timemachine"
+    "https://api.openweathermap.org/data/3.0/onecall/timemachine"
 )
 
 
@@ -87,7 +87,7 @@ def _ts_to_utc_str(timestamp: int | None) -> str | None:
 
 def _parse_weather_payload(payload: dict) -> dict:
     """
-    Extract risk-relevant fields from the OpenWeather 4.0 timemachine response.
+    Extract risk-relevant fields from the OpenWeather 3.0 timemachine response.
 
     Returns a structured dict with:
       - lat, lon, timezone
@@ -165,7 +165,7 @@ def _parse_weather_payload(payload: dict) -> dict:
 
 async def fetch_weather_data(lat: float, lon: float, event_date: str) -> dict:
     """
-    Fetch and parse OpenWeather 4.0 One-Call timemachine data for a given
+    Fetch and parse OpenWeather 3.0 One-Call timemachine data for a given
     location and date.
 
     Parameters
@@ -193,7 +193,7 @@ async def fetch_weather_data(lat: float, lon: float, event_date: str) -> dict:
     if not api_key:
         raise RuntimeError(
             "OPENWEATHER_API_KEY is not set. "
-            "A paid OpenWeather One Call API 4.0 subscription is required."
+            "A paid OpenWeather One Call API 3.0 subscription is required."
         )
 
     try:
