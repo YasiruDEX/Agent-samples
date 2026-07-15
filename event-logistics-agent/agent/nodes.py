@@ -26,6 +26,8 @@ from agent.prompts import (
 from agent.state import EventLogisticsState
 from tools.maps import fetch_maps_intelligence
 from tools.weather import fetch_weather_data
+from tools.dynamic_mcp import DYNAMIC_TOOLS
+from langgraph.prebuilt import create_react_agent
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +69,7 @@ def _strip_markdown_fences(text: str) -> str:
 
 def supervisor_router(state: EventLogisticsState) -> EventLogisticsState:
     """
-    Parses the last human message to extract venue_address and event_date.
+    Parses the last human message to extract route_intent, venue_address, and event_date.
     Initialises all other state fields to safe defaults before the pipeline runs.
     """
     logger.info("[supervisor_router] Entering node.")
@@ -100,21 +102,24 @@ def supervisor_router(state: EventLogisticsState) -> EventLogisticsState:
 
     try:
         parsed = json.loads(raw)
+        route_intent = parsed.get("route_intent", "risk_assessment")
         venue_address = parsed.get("venue_address", "")
         event_date = parsed.get("event_date", "")
     except Exception as exc:
         logger.error("[supervisor_router] JSON parse failed: %s — raw: %s", exc, raw)
+        route_intent = "risk_assessment"
         venue_address = last_human
         event_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    logger.info("[supervisor_router] venue=%r  date=%r", venue_address, event_date)
+    logger.info("[supervisor_router] intent=%r venue=%r date=%r", route_intent, venue_address, event_date)
 
     return {
         "messages": [
             AIMessage(
-                content=f"Supervisor parsed: venue='{venue_address}', date='{event_date}'"
+                content=f"Supervisor parsed: intent='{route_intent}', venue='{venue_address}', date='{event_date}'"
             )
         ],
+        "route_intent": route_intent,
         "venue_address": venue_address,
         "event_date": event_date,
         "resolved_lat": None,
@@ -328,4 +333,44 @@ def risk_analyzer_node(state: EventLogisticsState) -> EventLogisticsState:
     return {
         "messages": [AIMessage(content=risk_report)],
         "risk_analysis": risk_report,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Node E – General QA Agent Node
+# ---------------------------------------------------------------------------
+
+
+async def general_agent_node(state: EventLogisticsState) -> EventLogisticsState:
+    """
+    A dynamic tool-calling node that answers general logistics queries
+    (like distance, routing, weather lookups) using MCP tools.
+    """
+    logger.info("[general_agent_node] Entering node.")
+    
+    # Clean intermediate agent status messages
+    clean_history = []
+    for m in state["messages"]:
+        if isinstance(m, AIMessage):
+            content = m.content
+            if (content.startswith("Supervisor parsed:") or 
+                content.startswith("Maps analysis complete") or 
+                content.startswith("Weather data retrieved") or 
+                "Maps agent error" in content or 
+                "Weather agent error" in content or
+                content.startswith("Weather Error:") or 
+                content.startswith("Maps Error:")):
+                continue
+        clean_history.append(m)
+
+    sys_msg = SystemMessage(content="You are a helpful logistics assistant. Answer the user's questions using your tools if needed. When giving distances or walking times, try to be specific.")
+    clean_history.insert(0, sys_msg)
+    
+    agent = create_react_agent(_llm(temperature=0.0), tools=DYNAMIC_TOOLS)
+    
+    response = await agent.ainvoke({"messages": clean_history})
+    final_message = response["messages"][-1].content
+    
+    return {
+        "messages": [AIMessage(content=final_message)]
     }

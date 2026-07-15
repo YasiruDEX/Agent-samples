@@ -30,6 +30,7 @@ class EventLogisticsState(TypedDict):
     """
 
     messages: Annotated[list[BaseMessage], add_messages]
+    route_intent: str            # "risk_assessment", "general_query", or "end"
     venue_address: str
     event_date: str              # YYYY-MM-DD
     resolved_lat: Optional[float]

@@ -8,11 +8,11 @@ load_dotenv()
 client = TestClient(app)
 
 def run_tests():
-    print("Testing basic greeting...")
+    print("Testing basic greeting (general_query fallback)...")
     response = client.post(
         "/chat",
         json={
-            "session_id": "test-session-123",
+            "session_id": "test-session-greeting",
             "messages": [
                 {"role": "user", "content": "Hi there!"}
             ]
@@ -21,21 +21,43 @@ def run_tests():
     print("Greeting Status:", response.status_code)
     print("Greeting Response:", response.json())
 
-    print("\nTesting full risk report (this will invoke maps and weather)...")
+    print("\nTesting full risk report (risk_assessment)...")
     response = client.post(
         "/chat",
         json={
-            "session_id": "test-session-124",
+            "session_id": "test-session-report",
             "messages": [
                 {"role": "user", "content": "Assess Pelican Hill Resort for October 14, 2026"}
             ]
         }
     )
     print("Report Status:", response.status_code)
-    if response.status_code == 200:
-        print("Report Response:", response.json())
-    else:
-        print("Error Response:", response.text)
+    
+    print("\nTesting dynamic routing: distance query (general_query)...")
+    response = client.post(
+        "/chat",
+        json={
+            "session_id": "test-session-report",
+            "messages": [
+                {"role": "user", "content": "distance from wso2, colombo 4 to fort railway station"}
+            ]
+        }
+    )
+    print("Distance Status:", response.status_code)
+    print("Distance Response:", response.json())
+
+    print("\nTesting dynamic routing: walk time (general_query)...")
+    response = client.post(
+        "/chat",
+        json={
+            "session_id": "test-session-report",
+            "messages": [
+                {"role": "user", "content": "time it takes to walk"}
+            ]
+        }
+    )
+    print("Walk Time Status:", response.status_code)
+    print("Walk Time Response:", response.json())
 
 if __name__ == "__main__":
     run_tests()
