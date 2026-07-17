@@ -4,17 +4,23 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   AlertTriangle,
   Calendar,
+  ChevronDown,
   Cloud,
   Hotel,
+  Landmark,
   MapPin,
-  SquareParking,
   Plus,
+  Search,
   ShieldAlert,
+  SquareParking,
   Trash2,
   X,
 } from "@wso2/oxygen-ui-icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -28,6 +34,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  InputAdornment,
   Paper,
   Stack,
   TextField,
@@ -50,6 +57,14 @@ export const Route = createFileRoute("/events")({
 
 type PlacesResponse = { places: PlaceRecord[] };
 
+type PlaceGroup = {
+  key: string;
+  displayName: string;
+  venueAddress: string;
+  /** Ascending by event date, per the user's request to order the stack by date. */
+  places: PlaceRecord[];
+};
+
 const RISK_COLOR: Record<string, "success" | "warning" | "error" | "default"> =
   {
     low: "success",
@@ -58,13 +73,74 @@ const RISK_COLOR: Record<string, "success" | "warning" | "error" | "default"> =
     severe: "error",
   };
 
+// Deterministic, offline gradient palette used for card banners — no external
+// image requests, and the same venue always gets the same look.
+const GRADIENTS: Array<[string, string]> = [
+  ["#6366f1", "#a855f7"],
+  ["#0ea5e9", "#22d3ee"],
+  ["#f59e0b", "#ef4444"],
+  ["#10b981", "#3b82f6"],
+  ["#ec4899", "#f43f5e"],
+  ["#8b5cf6", "#6366f1"],
+  ["#14b8a6", "#06b6d4"],
+  ["#f97316", "#ec4899"],
+];
+
+function gradientFor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  const [from, to] = GRADIENTS[Math.abs(hash) % GRADIENTS.length];
+  return `linear-gradient(135deg, ${from} 0%, ${to} 100%)`;
+}
+
+function dateSortValue(eventDate: string): number {
+  const parsed = Date.parse(eventDate);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function groupPlaces(places: PlaceRecord[]): PlaceGroup[] {
+  const groups = new Map<string, PlaceGroup>();
+
+  for (const place of places) {
+    const displayName = place.report?.venue_name || place.venueAddress;
+    const key = displayName.trim().toLowerCase();
+    const existing = groups.get(key);
+    if (existing) {
+      existing.places.push(place);
+    } else {
+      groups.set(key, {
+        key,
+        displayName,
+        venueAddress: place.venueAddress,
+        places: [place],
+      });
+    }
+  }
+
+  for (const group of groups.values()) {
+    group.places.sort(
+      (a, b) => dateSortValue(a.eventDate) - dateSortValue(b.eventDate),
+    );
+  }
+
+  // Newest activity (by its most recent evaluation) surfaces first.
+  return Array.from(groups.values()).sort((a, b) => {
+    const aLatest = dateSortValue(a.places[a.places.length - 1].eventDate);
+    const bLatest = dateSortValue(b.places[b.places.length - 1].eventDate);
+    return bLatest - aLatest;
+  });
+}
+
 function EventsPage() {
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [venueAddress, setVenueAddress] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventTime, setEventTime] = useState("");
-  const [selected, setSelected] = useState<PlaceRecord | null>(null);
+  const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["places"],
@@ -110,7 +186,6 @@ function EventsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["places"] });
-      setSelected(null);
     },
   });
 
@@ -126,7 +201,20 @@ function EventsPage() {
     });
   }
 
-  const places = data?.places ?? [];
+  const places = useMemo(() => data?.places ?? [], [data]);
+  const groups = useMemo(() => groupPlaces(places), [places]);
+
+  const filteredGroups = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return groups;
+    return groups.filter(
+      (g) =>
+        g.displayName.toLowerCase().includes(term) ||
+        g.venueAddress.toLowerCase().includes(term),
+    );
+  }, [groups, search]);
+
+  const selectedGroup = groups.find((g) => g.key === selectedGroupKey) ?? null;
 
   return (
     <Box sx={{ height: "100%", overflowY: "auto", p: { xs: 2, md: 3 } }}>
@@ -134,7 +222,7 @@ function EventsPage() {
         direction="row"
         justifyContent="space-between"
         alignItems="center"
-        sx={{ mb: 3, maxWidth: "72rem", mx: "auto" }}
+        sx={{ mb: 2, maxWidth: "72rem", mx: "auto" }}
       >
         <Box>
           <Typography variant="h5" fontWeight="bold">
@@ -158,6 +246,24 @@ function EventsPage() {
       </Stack>
 
       <Box sx={{ maxWidth: "72rem", mx: "auto" }}>
+        {places.length > 0 && (
+          <TextField
+            placeholder="Search by venue name or address…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            size="small"
+            fullWidth
+            sx={{ mb: 3 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        )}
+
         {isLoading && (
           <Stack alignItems="center" sx={{ mt: 8 }}>
             <CircularProgress size={28} />
@@ -194,6 +300,13 @@ function EventsPage() {
           </Paper>
         )}
 
+        {!isLoading &&
+          !isError &&
+          places.length > 0 &&
+          filteredGroups.length === 0 && (
+            <Alert severity="info">No places match "{search}".</Alert>
+          )}
+
         <Box
           sx={{
             display: "grid",
@@ -202,19 +315,14 @@ function EventsPage() {
               sm: "repeat(2, 1fr)",
               lg: "repeat(3, 1fr)",
             },
-            gap: 2,
+            gap: 2.5,
           }}
         >
-          {places.map((place) => (
-            <PlaceCard
-              key={place.id}
-              place={place}
-              onOpen={() => setSelected(place)}
-              onDelete={() => deleteMutation.mutate(place.id)}
-              deleting={
-                deleteMutation.isPending &&
-                deleteMutation.variables === place.id
-              }
+          {filteredGroups.map((group) => (
+            <PlaceGroupCard
+              key={group.key}
+              group={group}
+              onOpen={() => setSelectedGroupKey(group.key)}
             />
           ))}
         </Box>
@@ -296,14 +404,14 @@ function EventsPage() {
         </form>
       </Dialog>
 
-      {/* Detail dialog */}
+      {/* Group detail dialog — every evaluation for this venue, oldest to newest */}
       <Dialog
-        open={Boolean(selected)}
-        onClose={() => setSelected(null)}
+        open={Boolean(selectedGroup)}
+        onClose={() => setSelectedGroupKey(null)}
         fullWidth
         maxWidth="md"
       >
-        {selected && (
+        {selectedGroup && (
           <>
             <DialogTitle
               sx={{
@@ -312,26 +420,87 @@ function EventsPage() {
                 justifyContent: "space-between",
               }}
             >
-              <span>
-                {selected.report?.venue_name || selected.venueAddress}
-              </span>
-              <IconButton onClick={() => setSelected(null)} size="small">
+              <span>{selectedGroup.displayName}</span>
+              <IconButton
+                onClick={() => setSelectedGroupKey(null)}
+                size="small"
+              >
                 <X size={18} />
               </IconButton>
             </DialogTitle>
             <DialogContent dividers>
-              <PlaceDetails place={selected} />
+              <Stack spacing={1.5}>
+                {selectedGroup.places.map((place) => (
+                  <Accordion
+                    key={place.id}
+                    variant="outlined"
+                    defaultExpanded={selectedGroup.places.length === 1}
+                    disableGutters
+                  >
+                    <AccordionSummary expandIcon={<ChevronDown size={18} />}>
+                      <Stack
+                        direction="row"
+                        spacing={1.5}
+                        alignItems="center"
+                        sx={{ width: "100%", pr: 1 }}
+                      >
+                        <Calendar size={14} />
+                        <Typography
+                          variant="body2"
+                          fontWeight="medium"
+                          sx={{ flex: 1 }}
+                        >
+                          {place.eventDate}
+                        </Typography>
+                        {place.status === "ready" &&
+                          place.report?.overall_risk_level && (
+                            <Chip
+                              size="small"
+                              label={place.report.overall_risk_level}
+                              color={
+                                RISK_COLOR[
+                                  place.report.overall_risk_level.toLowerCase()
+                                ] ?? "default"
+                              }
+                              sx={{ textTransform: "capitalize" }}
+                            />
+                          )}
+                        {place.status === "pending" && (
+                          <CircularProgress size={16} />
+                        )}
+                        {place.status === "error" && (
+                          <AlertTriangle
+                            size={16}
+                            color="var(--mui-palette-error-main, #d32f2f)"
+                          />
+                        )}
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteMutation.mutate(place.id);
+                          }}
+                          disabled={
+                            deleteMutation.isPending &&
+                            deleteMutation.variables === place.id
+                          }
+                        >
+                          {deleteMutation.isPending &&
+                          deleteMutation.variables === place.id ? (
+                            <CircularProgress size={14} />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </IconButton>
+                      </Stack>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <PlaceDetails place={place} />
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </Stack>
             </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-              <Button
-                color="error"
-                startIcon={<Trash2 size={16} />}
-                onClick={() => deleteMutation.mutate(selected.id)}
-                disabled={deleteMutation.isPending}
-              >
-                Delete
-              </Button>
-            </DialogActions>
           </>
         )}
       </Dialog>
@@ -339,122 +508,162 @@ function EventsPage() {
   );
 }
 
-function PlaceCard({
-  place,
+function PlaceGroupCard({
+  group,
   onOpen,
-  onDelete,
-  deleting,
 }: {
-  place: PlaceRecord;
+  group: PlaceGroup;
   onOpen: () => void;
-  onDelete: () => void;
-  deleting: boolean;
 }) {
-  const riskLevel = place.report?.overall_risk_level?.toLowerCase();
+  const latest = group.places[group.places.length - 1];
+  const stackDepth = Math.min(group.places.length - 1, 2);
+  const banner = gradientFor(group.key);
+  const riskLevel = latest.report?.overall_risk_level?.toLowerCase();
 
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderRadius: 3,
-        display: "flex",
-        flexDirection: "column",
-        cursor: place.status === "ready" ? "pointer" : "default",
-        transition: "box-shadow 0.15s ease",
-        "&:hover": place.status === "ready" ? { boxShadow: 3 } : undefined,
-      }}
-      onClick={place.status === "ready" ? onOpen : undefined}
-    >
-      <CardContent
-        sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.25 }}
+    <Box sx={{ position: "relative" }}>
+      {Array.from({ length: stackDepth }).map((_, i) => (
+        <Box
+          key={i}
+          sx={{
+            position: "absolute",
+            inset: 0,
+            top: (i + 1) * 6,
+            left: (i + 1) * 6,
+            borderRadius: 3,
+            border: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            zIndex: 0,
+            opacity: 1 - (i + 1) * 0.25,
+          }}
+        />
+      ))}
+
+      <Card
+        variant="outlined"
+        sx={{
+          position: "relative",
+          zIndex: 1,
+          borderRadius: 3,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          cursor: "pointer",
+          transition: "box-shadow 0.15s ease, transform 0.15s ease",
+          "&:hover": { boxShadow: 4, transform: "translateY(-2px)" },
+        }}
+        onClick={onOpen}
       >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="flex-start"
+        <Box
+          sx={{
+            position: "relative",
+            height: 92,
+            background: banner,
+            display: "flex",
+            alignItems: "flex-end",
+            p: 1.5,
+            overflow: "hidden",
+          }}
         >
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ pr: 1 }}>
-            {place.report?.venue_name || place.venueAddress}
-          </Typography>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
+          <Landmark
+            size={72}
+            style={{
+              position: "absolute",
+              top: -12,
+              right: -12,
+              opacity: 0.18,
+              color: "white",
             }}
-            disabled={deleting}
+          />
+          {group.places.length > 1 && (
+            <Chip
+              size="small"
+              label={`${group.places.length} evaluations`}
+              sx={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                bgcolor: "rgba(0,0,0,0.35)",
+                color: "white",
+                fontWeight: 600,
+              }}
+            />
+          )}
+          <Typography
+            variant="subtitle1"
+            fontWeight="bold"
+            sx={{
+              color: "white",
+              textShadow: "0 1px 3px rgba(0,0,0,0.45)",
+              lineHeight: 1.2,
+            }}
           >
-            {deleting ? <CircularProgress size={16} /> : <Trash2 size={16} />}
-          </IconButton>
-        </Stack>
+            {group.displayName}
+          </Typography>
+        </Box>
 
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          color="text.secondary"
+        <CardContent
+          sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1 }}
         >
-          <Calendar size={14} />
-          <Typography variant="caption">{place.eventDate}</Typography>
-        </Stack>
-
-        {place.venueAddress && place.report?.venue_name && (
           <Stack
             direction="row"
             spacing={1}
-            alignItems="flex-start"
+            alignItems="center"
             color="text.secondary"
           >
-            <MapPin size={14} style={{ marginTop: 2 }} />
-            <Typography variant="caption">{place.venueAddress}</Typography>
-          </Stack>
-        )}
-
-        {place.status === "pending" && (
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-            <CircularProgress size={14} />
-            <Typography variant="caption" color="text.secondary">
-              Evaluating…
+            <Calendar size={14} />
+            <Typography variant="caption">
+              Latest: {latest.eventDate}
             </Typography>
           </Stack>
-        )}
 
-        {place.status === "error" && (
-          <Alert
-            severity="error"
-            sx={{ mt: 1 }}
-            icon={<AlertTriangle size={16} />}
-          >
-            {place.errorMessage || "Evaluation failed."}
-          </Alert>
-        )}
+          {latest.status === "pending" && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <CircularProgress size={14} />
+              <Typography variant="caption" color="text.secondary">
+                Evaluating…
+              </Typography>
+            </Stack>
+          )}
 
-        {place.status === "ready" && (
-          <>
-            {riskLevel && (
-              <Chip
-                size="small"
-                label={`${riskLevel} risk`}
-                color={RISK_COLOR[riskLevel] ?? "default"}
-                sx={{ alignSelf: "flex-start", textTransform: "capitalize" }}
-              />
-            )}
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                display: "-webkit-box",
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
+          {latest.status === "error" && (
+            <Alert
+              severity="error"
+              sx={{ mt: 0.5 }}
+              icon={<AlertTriangle size={16} />}
             >
-              {place.report?.executive_summary}
-            </Typography>
-          </>
-        )}
-      </CardContent>
-    </Card>
+              {latest.errorMessage || "Evaluation failed."}
+            </Alert>
+          )}
+
+          {latest.status === "ready" && (
+            <>
+              {riskLevel && (
+                <Chip
+                  size="small"
+                  label={`${riskLevel} risk`}
+                  color={RISK_COLOR[riskLevel] ?? "default"}
+                  sx={{ alignSelf: "flex-start", textTransform: "capitalize" }}
+                />
+              )}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {latest.report?.executive_summary}
+              </Typography>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
 
@@ -471,7 +680,6 @@ function PlaceDetails({ place }: { place: PlaceRecord }) {
     string,
     unknown
   > | null;
-  const riskLevel = report?.overall_risk_level?.toLowerCase();
 
   if (place.status !== "ready" || !report) {
     return (
@@ -483,20 +691,6 @@ function PlaceDetails({ place }: { place: PlaceRecord }) {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        {riskLevel && (
-          <Chip
-            size="small"
-            label={`${riskLevel} risk`}
-            color={RISK_COLOR[riskLevel] ?? "default"}
-            sx={{ textTransform: "capitalize" }}
-          />
-        )}
-        <Typography variant="caption" color="text.secondary">
-          {place.eventDate}
-        </Typography>
-      </Stack>
-
       <Section title="Executive Summary" icon={<ShieldAlert size={16} />}>
         <Typography variant="body2">{report.executive_summary}</Typography>
       </Section>

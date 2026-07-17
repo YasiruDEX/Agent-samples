@@ -126,8 +126,8 @@ function ChatPage() {
       });
 
       if (placeEvaluation) {
-        // Full venue evaluations become a card in the Events tab, not a wall of
-        // markdown in the chat — persist it and just point the user there.
+        // Full venue evaluations are shown in chat AND saved as a card in the
+        // Events tab, so the user gets both without asking twice.
         const evaluation: PlaceEvaluationPayload = placeEvaluation;
         void fetch("/api/events", {
           method: "POST",
@@ -135,13 +135,11 @@ function ChatPage() {
           body: JSON.stringify({ evaluation }),
         });
 
-        const venueName =
-          evaluation.report?.venue_name || evaluation.venue_address;
         setMessages((m) => [
           ...m,
           {
             role: "assistant",
-            content: `I've evaluated **${venueName}** for ${evaluation.event_date}. Find the full risk report in your [Events tab](/events).`,
+            content: `${reply || "(empty response)"}\n\nAlso saved to your [Events tab](/events) as a card.`,
           },
         ]);
       } else {

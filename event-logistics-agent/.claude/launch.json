@@ -10,10 +10,9 @@
     {
       "name": "ui",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["run", "dev", "--", "--port", "4173", "--strictPort"],
       "cwd": "ui",
-      "port": 3000,
-      "autoPort": true
+      "port": 4173
     }
   ]
 }
