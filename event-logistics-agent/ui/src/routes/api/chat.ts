@@ -10,6 +10,13 @@ type Body = {
   messages?: Array<{ role: "user" | "assistant" | "system"; content: string }>;
   session_id?: string;
   message?: string;
+  stream?: boolean;
+};
+
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
 };
 
 export const Route = createFileRoute("/api/chat")({
@@ -26,10 +33,16 @@ export const Route = createFileRoute("/api/chat")({
         const incomingMessages = normalizeMessages(body.messages);
         const fallbackMessage =
           typeof body.message === "string" && body.message.trim()
-            ? [{ role: "user", content: body.message.trim() } satisfies ChatMessage]
+            ? [
+                {
+                  role: "user",
+                  content: body.message.trim(),
+                } satisfies ChatMessage,
+              ]
             : [];
 
-        const messages = incomingMessages.length > 0 ? incomingMessages : fallbackMessage;
+        const messages =
+          incomingMessages.length > 0 ? incomingMessages : fallbackMessage;
 
         if (messages.length === 0) {
           return new Response("messages array is required", { status: 400 });
@@ -46,9 +59,13 @@ export const Route = createFileRoute("/api/chat")({
           );
         }
 
+        // Default to streaming; callers can opt out with `stream: false`.
+        const wantsStream = body.stream !== false;
+
         // Build request headers for the external agent
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
+          Accept: wantsStream ? "text/event-stream" : "application/json",
         };
 
         if (apiKey) {
@@ -61,8 +78,10 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const outboundBody: Record<string, unknown> = {
-          session_id: typeof body.session_id === "string" ? body.session_id : "default",
+          session_id:
+            typeof body.session_id === "string" ? body.session_id : "default",
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          stream: wantsStream,
         };
 
         try {
@@ -74,34 +93,67 @@ export const Route = createFileRoute("/api/chat")({
 
           if (!res.ok) {
             const text = await res.text().catch(() => "");
-            return new Response(
-              `Agent responded with ${res.status}: ${text || res.statusText}`,
-              { status: res.status >= 400 && res.status < 600 ? res.status : 502 },
-            );
+            const message = `Agent responded with ${res.status}: ${text || res.statusText}`;
+            const status =
+              res.status >= 400 && res.status < 600 ? res.status : 502;
+            return wantsStream
+              ? sseError(message, status)
+              : new Response(message, { status });
           }
 
           const contentType = res.headers.get("content-type") ?? "";
-          if (contentType.includes("application/json")) {
-            const data = (await res.json()) as unknown;
-            const text = extractText(data);
-            return new Response(JSON.stringify({ text }), {
-              headers: { "Content-Type": "application/json" },
+
+          // The upstream agent supports SSE — pipe its stream straight through.
+          if (
+            wantsStream &&
+            contentType.includes("text/event-stream") &&
+            res.body
+          ) {
+            return new Response(res.body, {
+              status: res.status,
+              headers: SSE_HEADERS,
             });
           }
 
-          // Plain-text response from the agent
-          const text = await res.text();
+          // Upstream returned a single buffered response (JSON or plain text).
+          const text = contentType.includes("application/json")
+            ? extractText((await res.json()) as unknown)
+            : await res.text();
+
+          if (wantsStream) {
+            // Synthesize a single-frame SSE stream so the client's SSE parser
+            // works uniformly regardless of whether the upstream agent streams.
+            return sseDone(text);
+          }
+
           return new Response(JSON.stringify({ text }), {
             headers: { "Content-Type": "application/json" },
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
-          return new Response(message, { status: 502 });
+          return wantsStream
+            ? sseError(message, 502)
+            : new Response(message, { status: 502 });
         }
       },
     },
   },
 });
+
+function sseFrame(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function sseDone(text: string): Response {
+  return new Response(sseFrame("done", { text }), { headers: SSE_HEADERS });
+}
+
+function sseError(message: string, status: number): Response {
+  return new Response(sseFrame("error", { message }), {
+    status,
+    headers: SSE_HEADERS,
+  });
+}
 
 function normalizeMessages(messages: Body["messages"]): ChatMessage[] {
   if (!Array.isArray(messages)) return [];
@@ -117,7 +169,9 @@ function isChatMessage(value: unknown): value is ChatMessage {
 
   const message = value as Record<string, unknown>;
   return (
-    (message.role === "user" || message.role === "assistant" || message.role === "system") &&
+    (message.role === "user" ||
+      message.role === "assistant" ||
+      message.role === "system") &&
     typeof message.content === "string"
   );
 }

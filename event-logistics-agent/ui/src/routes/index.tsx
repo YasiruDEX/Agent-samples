@@ -1,4 +1,4 @@
-import { sendChat, type ChatMessage } from "@/lib/chat-api";
+import { streamChat, type ChatMessage } from "@/lib/chat-api";
 import { useSettings } from "@/lib/settings-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { Send, Sparkles, User, Trash2 } from "@wso2/oxygen-ui-icons-react";
@@ -39,7 +39,9 @@ function isChatMessage(value: unknown): value is ChatMessage {
 
   const message = value as Record<string, unknown>;
   return (
-    (message.role === "user" || message.role === "assistant" || message.role === "system") &&
+    (message.role === "user" ||
+      message.role === "assistant" ||
+      message.role === "system") &&
     typeof message.content === "string"
   );
 }
@@ -64,6 +66,8 @@ function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stageLabel, setStageLabel] = useState<string | null>(null);
+  const [streamingText, setStreamingText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -75,15 +79,21 @@ function ChatPage() {
   useEffect(() => {
     if (!isLoaded) return;
     try {
-      window.localStorage.setItem(CHAT_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+      window.localStorage.setItem(
+        CHAT_MESSAGES_STORAGE_KEY,
+        JSON.stringify(messages),
+      );
     } catch {
       // Ignore storage failures and keep the chat functional.
     }
   }, [messages, isLoaded]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, loading]);
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, loading, streamingText]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -97,13 +107,28 @@ function ChatPage() {
     setMessages(next);
     setInput("");
     setLoading(true);
+    setStageLabel(null);
+    setStreamingText("");
     try {
-      const reply = await sendChat({ apiUrl, apiKey, apiHeader, messages: next });
-      setMessages((m) => [...m, { role: "assistant", content: reply || "(empty response)" }]);
+      const reply = await streamChat({
+        apiUrl,
+        apiKey,
+        apiHeader,
+        messages: next,
+        onStage: (stage) =>
+          setStageLabel(stage.status === "start" ? stage.label : null),
+        onToken: (accumulated) => setStreamingText(accumulated),
+      });
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: reply || "(empty response)" },
+      ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
+      setStageLabel(null);
+      setStreamingText("");
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }
@@ -116,7 +141,15 @@ function ChatPage() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "col", height: "100%", position: "relative" }} className="flex flex-col">
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "col",
+        height: "100%",
+        position: "relative",
+      }}
+      className="flex flex-col"
+    >
       {messages.length > 0 && (
         <Box
           sx={{
@@ -162,11 +195,21 @@ function ChatPage() {
         {messages.length === 0 && !loading ? (
           <EmptyState />
         ) : (
-          <Stack spacing={3} sx={{ maxWidth: "48rem", mx: "auto", width: "100%", py: 2 }}>
+          <Stack
+            spacing={3}
+            sx={{ maxWidth: "48rem", mx: "auto", width: "100%", py: 2 }}
+          >
             {messages.map((m, i) => (
               <MessageBubble key={i} message={m} />
             ))}
-            {loading && <TypingIndicator />}
+            {loading && streamingText && (
+              <MessageBubble
+                message={{ role: "assistant", content: streamingText }}
+              />
+            )}
+            {loading && !streamingText && (
+              <TypingIndicator label={stageLabel} />
+            )}
             {error && <Alert severity="error">{error}</Alert>}
           </Stack>
         )}
@@ -220,7 +263,11 @@ function ChatPage() {
               <Send size={18} />
             </IconButton>
           </Stack>
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center", mt: 1.5 }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: "block", textAlign: "center", mt: 1.5 }}
+          >
             Endpoint: <span style={{ fontFamily: "monospace" }}>{apiUrl}</span>
           </Typography>
         </Box>
@@ -258,8 +305,14 @@ function EmptyState() {
         How can I help today?
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Start a conversation with your agent. Configure the endpoint and API key from{" "}
-        <Typography component="span" variant="body2" fontWeight="medium" color="text.primary">
+        Start a conversation with your agent. Configure the endpoint and API key
+        from{" "}
+        <Typography
+          component="span"
+          variant="body2"
+          fontWeight="medium"
+          color="text.primary"
+        >
           Settings
         </Typography>
         .
@@ -271,7 +324,11 @@ function EmptyState() {
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
   return (
-    <Stack direction={isUser ? "row-reverse" : "row"} spacing={2} sx={{ width: "100%" }}>
+    <Stack
+      direction={isUser ? "row-reverse" : "row"}
+      spacing={2}
+      sx={{ width: "100%" }}
+    >
       <Avatar
         sx={{
           width: 36,
@@ -295,14 +352,22 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           wordBreak: "break-word",
         }}
       >
-        {message.role === "assistant" ? <MarkdownText value={message.content} /> : <PlainText value={message.content} />}
+        {message.role === "assistant" ? (
+          <MarkdownText value={message.content} />
+        ) : (
+          <PlainText value={message.content} />
+        )}
       </Paper>
     </Stack>
   );
 }
 
 function PlainText({ value }: { value: string }) {
-  return <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{value}</div>;
+  return (
+    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+      {value}
+    </div>
+  );
 }
 
 function MarkdownText({ value }: { value: string }) {
@@ -346,7 +411,11 @@ function MarkdownText({ value }: { value: string }) {
         }
 
         return (
-          <Typography key={index} variant="body2" sx={{ lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          <Typography
+            key={index}
+            variant="body2"
+            sx={{ lineHeight: 1.6, whiteSpace: "pre-wrap" }}
+          >
             <InlineMarkdown value={block.text} />
           </Typography>
         );
@@ -381,7 +450,12 @@ function InlineMarkdown({ value }: { value: string }) {
 
         if (segment.type === "strong") {
           return (
-            <Typography key={index} component="strong" variant="body2" fontWeight="bold">
+            <Typography
+              key={index}
+              component="strong"
+              variant="body2"
+              fontWeight="bold"
+            >
               {segment.text}
             </Typography>
           );
@@ -423,7 +497,10 @@ type InlineSegment =
 
 function parseMarkdownBlocks(value: string): MarkdownBlock[] {
   // Convert headers (### Text) to bold (**Text**)
-  let normalized = value.replace(/\r\n/g, "\n").replace(/^#{1,6}\s+(.*)$/gm, "**$1**").trim();
+  const normalized = value
+    .replace(/\r\n/g, "\n")
+    .replace(/^#{1,6}\s+(.*)$/gm, "**$1**")
+    .trim();
   if (!normalized) return [];
 
   const rawBlocks = normalized.split(/\n\s*\n/);
@@ -474,7 +551,7 @@ function parseInlineSegments(value: string): InlineSegment[] {
   return segments.length > 0 ? segments : [{ type: "text", text: value }];
 }
 
-function TypingIndicator() {
+function TypingIndicator({ label }: { label?: string | null }) {
   return (
     <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
       <Avatar
@@ -497,12 +574,20 @@ function TypingIndicator() {
           borderColor: "divider",
           display: "flex",
           alignItems: "center",
-          gap: 0.5,
+          gap: 1,
         }}
       >
-        <Dot delay="0ms" />
-        <Dot delay="150ms" />
-        <Dot delay="300ms" />
+        {label ? (
+          <Typography variant="body2" color="text.secondary">
+            {label}
+          </Typography>
+        ) : (
+          <Stack direction="row" spacing={0.5}>
+            <Dot delay="0ms" />
+            <Dot delay="150ms" />
+            <Dot delay="300ms" />
+          </Stack>
+        )}
       </Paper>
     </Stack>
   );

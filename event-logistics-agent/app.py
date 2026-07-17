@@ -15,12 +15,12 @@ import json
 import logging
 import os
 import traceback
-from typing import Any
+from typing import Any, AsyncIterator
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse, StreamingResponse
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from openai import AsyncOpenAI
@@ -83,6 +83,7 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str | None = None
     messages: list[ChatMessageInput] | None = None
+    stream: bool = False
 
 
 class ChatResponse(BaseModel):
@@ -232,15 +233,148 @@ async def _run_chat_loop(request: ChatRequest) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Streaming (SSE) support for /chat
+# ---------------------------------------------------------------------------
+
+# Human-readable progress labels shown while each pipeline node is running.
+NODE_LABELS: dict[str, str] = {
+    "supervisor_router": "Understanding your request…",
+    "maps_node": "Looking up venue, hotels, parking & accessibility…",
+    "weather_node": "Checking the weather forecast…",
+    "risk_analyzer_node": "Generating the risk assessment report…",
+    "general_agent_node": "Answering your question…",
+}
+
+# Nodes whose LLM output is the user-facing answer — their tokens are forwarded
+# to the client as they're generated. Other nodes only produce internal
+# JSON/routing artifacts, so their tokens are not streamed.
+#
+# general_agent_node delegates to a nested create_react_agent sub-graph, so its
+# real token stream surfaces under a namespaced sub-run (e.g. "general_agent_node:<id>")
+# rather than under the top-level "general_agent_node" name — the top-level name only
+# ever emits one aggregated echo chunk at the end, which would double the output if streamed.
+def _text_stream_key(namespace: tuple[str, ...], node: str | None) -> str | None:
+    if not namespace and node == "risk_analyzer_node":
+        return "risk_analyzer_node"
+    if namespace and namespace[0].startswith("general_agent_node:"):
+        return "general_agent_node"
+    return None
+
+
+def _to_langchain_messages(request: ChatRequest) -> list[Any]:
+    langchain_messages: list[Any] = []
+    if request.messages:
+        for msg in request.messages:
+            if msg.role == "user":
+                langchain_messages.append(HumanMessage(content=msg.content))
+            elif msg.role == "assistant":
+                langchain_messages.append(AIMessage(content=msg.content))
+            elif msg.role == "system":
+                langchain_messages.append(SystemMessage(content=msg.content))
+    elif request.message:
+        langchain_messages.append(HumanMessage(content=request.message))
+    return langchain_messages
+
+
+def _initial_state(langchain_messages: list[Any]) -> dict[str, Any]:
+    return {
+        "messages": langchain_messages,
+        "venue_address": "",
+        "event_date": "",
+        "resolved_lat": None,
+        "resolved_lon": None,
+        "maps_data": {},
+        "weather_data": {},
+        "risk_analysis": "",
+    }
+
+
+def _sse(event: str, data: dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _next_node(node_name: str, delta: dict[str, Any]) -> str | None:
+    # Mirrors the routing wired up in agent/graph.py — keep in sync with build_graph().
+    if node_name == "supervisor_router":
+        intent = delta.get("route_intent", "risk_assessment")
+        return "general_agent_node" if intent == "general_query" else "maps_node"
+    if node_name == "maps_node":
+        return "weather_node"
+    if node_name == "weather_node":
+        return "risk_analyzer_node"
+    return None
+
+
+async def _stream_chat(langchain_messages: list[Any]) -> AsyncIterator[str]:
+    graph = build_graph()
+    streamed_text = ""
+    final_text = ""
+    try:
+        yield _sse(
+            "stage",
+            {"node": "supervisor_router", "status": "start", "label": NODE_LABELS["supervisor_router"]},
+        )
+
+        async for namespace, mode, payload in graph.astream(
+            _initial_state(langchain_messages),
+            stream_mode=["updates", "messages"],
+            subgraphs=True,
+        ):
+            if mode == "messages":
+                chunk, metadata = payload
+                stream_key = _text_stream_key(namespace, metadata.get("langgraph_node"))
+                if stream_key and isinstance(chunk, AIMessageChunk) and chunk.content:
+                    streamed_text += chunk.content
+                    yield _sse("token", {"node": stream_key, "text": chunk.content})
+                continue
+
+            # mode == "updates": only the top-level pipeline nodes matter for stage
+            # tracking — nested sub-graph node updates (e.g. general_agent_node's
+            # internal ReAct loop) show up under a non-empty namespace and are skipped.
+            if namespace:
+                continue
+
+            for node_name, delta in payload.items():
+                if node_name == "risk_analyzer_node":
+                    final_text = delta.get("risk_analysis") or final_text
+                elif node_name == "general_agent_node":
+                    node_messages = delta.get("messages") or []
+                    if node_messages and getattr(node_messages[-1], "content", None):
+                        final_text = node_messages[-1].content
+
+                yield _sse(
+                    "stage",
+                    {"node": node_name, "status": "complete", "label": NODE_LABELS.get(node_name, node_name)},
+                )
+
+                next_node = _next_node(node_name, delta)
+                if next_node:
+                    yield _sse(
+                        "stage",
+                        {"node": next_node, "status": "start", "label": NODE_LABELS.get(next_node, next_node)},
+                    )
+
+        text = streamed_text.strip() or final_text.strip() or "I could not produce a response."
+        yield _sse("done", {"text": text})
+    except Exception as exc:
+        logger.exception("Streaming pipeline error: %s", exc)
+        yield _sse("error", {"message": str(exc)})
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
 
-@app.post("/chat", response_model=ChatResponse, summary="Outdoor Event Logistics Risk Assessment (LangGraph Pipeline)")
-async def chat(request: ChatRequest):
+@app.post("/chat", response_model=None, summary="Outdoor Event Logistics Risk Assessment (LangGraph Pipeline)")
+async def chat(request: ChatRequest, http_request: Request):
     """
-    Runs the full 4-node LangGraph pipeline for outdoor event & wedding logistics risk assessment.
+    Runs the full LangGraph pipeline for outdoor event & wedding logistics risk assessment.
     Accepts conversation history and infers the last user message as the query.
+
+    Set `stream: true` in the request body (or send `Accept: text/event-stream`) to
+    receive Server-Sent Events with pipeline progress + token-by-token output instead
+    of a single buffered JSON response.
     """
     user_query = ""
     if request.message:
@@ -257,32 +391,26 @@ async def chat(request: ChatRequest):
             detail="No user message found to analyze.",
         )
 
-    langchain_messages = []
-    if request.messages:
-        for msg in request.messages:
-            if msg.role == "user":
-                langchain_messages.append(HumanMessage(content=msg.content))
-            elif msg.role == "assistant":
-                langchain_messages.append(AIMessage(content=msg.content))
-            elif msg.role == "system":
-                langchain_messages.append(SystemMessage(content=msg.content))
-    elif request.message:
-        langchain_messages.append(HumanMessage(content=request.message))
+    langchain_messages = _to_langchain_messages(request)
+
+    wants_stream = request.stream or "text/event-stream" in (
+        http_request.headers.get("accept") or ""
+    )
+
+    if wants_stream:
+        return StreamingResponse(
+            _stream_chat(langchain_messages),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     graph = build_graph()
     try:
-        final_state = await graph.ainvoke(
-            {
-                "messages": langchain_messages,
-                "venue_address": "",
-                "event_date": "",
-                "resolved_lat": None,
-                "resolved_lon": None,
-                "maps_data": {},
-                "weather_data": {},
-                "risk_analysis": "",
-            }
-        )
+        final_state = await graph.ainvoke(_initial_state(langchain_messages))
     except Exception as exc:
         logger.exception("Pipeline error: %s", exc)
         raise HTTPException(

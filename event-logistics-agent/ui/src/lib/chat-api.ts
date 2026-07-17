@@ -3,6 +3,12 @@ export type ChatMessage = {
   content: string;
 };
 
+export type StageEvent = {
+  node: string;
+  status: "start" | "complete";
+  label: string;
+};
+
 const SESSION_ID_STORAGE_KEY = "agent-sample-tester:session-id";
 
 type SendOpts = {
@@ -13,31 +19,111 @@ type SendOpts = {
   signal?: AbortSignal;
 };
 
-export async function sendChat({
+type StreamOpts = SendOpts & {
+  /** Called whenever a pipeline stage starts or completes. */
+  onStage?: (stage: StageEvent) => void;
+  /** Called with the full accumulated text so far, plus the newly-arrived delta. */
+  onToken?: (accumulatedText: string, deltaText: string) => void;
+};
+
+/**
+ * Streams a chat response via SSE, reporting incremental progress through
+ * onStage/onToken, and resolving with the final complete text.
+ */
+export async function streamChat({
   messages,
   signal,
-}: SendOpts): Promise<string> {
-  // Always route through the internal /api/chat proxy so that the full
-  // conversation history is forwarded to the configured external agent.
-  // The proxy reads AGENT_URL / AGENT_API_KEY from the server-side .env file
-  // and attaches the correct auth header before calling the external agent.
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-
-  const body: Record<string, unknown> = {
-    session_id: getSessionId(),
-    messages,
-  };
-
+  onStage,
+  onToken,
+}: StreamOpts): Promise<string> {
   const res = await fetch("/api/chat", {
     method: "POST",
-    headers,
-    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify({
+      session_id: getSessionId(),
+      messages,
+      stream: true,
+    }),
     signal,
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Request failed (${res.status}): ${text || res.statusText}`);
+    throw new Error(
+      `Request failed (${res.status}): ${text || res.statusText}`,
+    );
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("text/event-stream") || !res.body) {
+    if (contentType.includes("application/json")) {
+      return extractText((await res.json()) as unknown);
+    }
+    return await res.text();
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let streamedText = "";
+  let finalText: string | null = null;
+  let errorMessage: string | null = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let separatorIndex: number;
+    while ((separatorIndex = buffer.indexOf("\n\n")) !== -1) {
+      const rawFrame = buffer.slice(0, separatorIndex);
+      buffer = buffer.slice(separatorIndex + 2);
+      const frame = parseSSEFrame(rawFrame);
+      if (!frame) continue;
+
+      if (frame.event === "token") {
+        const delta = (frame.data as { text?: string }).text ?? "";
+        streamedText += delta;
+        onToken?.(streamedText, delta);
+      } else if (frame.event === "stage") {
+        onStage?.(frame.data as StageEvent);
+      } else if (frame.event === "done") {
+        finalText = (frame.data as { text?: string }).text ?? streamedText;
+      } else if (frame.event === "error") {
+        errorMessage =
+          (frame.data as { message?: string }).message ?? "Agent error";
+      }
+    }
+  }
+
+  if (errorMessage) throw new Error(errorMessage);
+  return finalText ?? streamedText;
+}
+
+/** Non-streaming variant, kept for callers that want a single buffered response. */
+export async function sendChat({
+  messages,
+  signal,
+}: SendOpts): Promise<string> {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: getSessionId(),
+      messages,
+      stream: false,
+    }),
+    signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Request failed (${res.status}): ${text || res.statusText}`,
+    );
   }
 
   const contentType = res.headers.get("content-type") ?? "";
@@ -46,6 +132,27 @@ export async function sendChat({
     return extractText(data);
   }
   return await res.text();
+}
+
+function parseSSEFrame(raw: string): { event: string; data: unknown } | null {
+  let eventName = "message";
+  const dataLines: string[] = [];
+
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim();
+    } else if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trim());
+    }
+  }
+
+  if (dataLines.length === 0) return null;
+
+  try {
+    return { event: eventName, data: JSON.parse(dataLines.join("\n")) };
+  } catch {
+    return null;
+  }
 }
 
 function getSessionId() {

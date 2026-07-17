@@ -12,8 +12,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import datetime, timezone
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
 from agent.config import settings
@@ -67,7 +69,9 @@ def _strip_markdown_fences(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def supervisor_router(state: EventLogisticsState) -> EventLogisticsState:
+async def supervisor_router(
+    state: EventLogisticsState, config: RunnableConfig | None = None
+) -> EventLogisticsState:
     """
     Parses the last human message to extract route_intent, venue_address, and event_date.
     Initialises all other state fields to safe defaults before the pipeline runs.
@@ -94,8 +98,8 @@ def supervisor_router(state: EventLogisticsState) -> EventLogisticsState:
                 continue
         clean_history.append(m)
 
-    response = _llm(temperature=0.0).invoke(
-        [SystemMessage(content=SUPERVISOR_SYSTEM_PROMPT)] + clean_history
+    response = await _llm(temperature=0.0).ainvoke(
+        [SystemMessage(content=SUPERVISOR_SYSTEM_PROMPT)] + clean_history, config=config
     )
 
     raw = _strip_markdown_fences(response.content)
@@ -135,7 +139,9 @@ def supervisor_router(state: EventLogisticsState) -> EventLogisticsState:
 # ---------------------------------------------------------------------------
 
 
-async def maps_node(state: EventLogisticsState) -> EventLogisticsState:
+async def maps_node(
+    state: EventLogisticsState, config: RunnableConfig | None = None
+) -> EventLogisticsState:
     """
     Calls the Google Maps MCP tool-server to:
       1. Geocode the venue → resolved_lat / resolved_lon
@@ -185,9 +191,10 @@ async def maps_node(state: EventLogisticsState) -> EventLogisticsState:
         lon=lon,
     )
 
-    synthesis_raw = _strip_markdown_fences(
-        _llm(temperature=0.0).invoke([HumanMessage(content=synthesis_prompt)]).content
+    synthesis_response = await _llm(temperature=0.0).ainvoke(
+        [HumanMessage(content=synthesis_prompt)], config=config
     )
+    synthesis_raw = _strip_markdown_fences(synthesis_response.content)
 
     try:
         maps_summary = json.loads(synthesis_raw)
@@ -279,7 +286,9 @@ async def weather_node(state: EventLogisticsState) -> EventLogisticsState:
 # ---------------------------------------------------------------------------
 
 
-def risk_analyzer_node(state: EventLogisticsState) -> EventLogisticsState:
+async def risk_analyzer_node(
+    state: EventLogisticsState, config: RunnableConfig | None = None
+) -> EventLogisticsState:
     """
     Pure LLM reasoning node — no external tools.
     Synthesises maps_data + weather_data into a detailed risk report.
@@ -317,11 +326,12 @@ def risk_analyzer_node(state: EventLogisticsState) -> EventLogisticsState:
     )
 
     try:
-        response = _llm(temperature=0.3).invoke(
+        response = await _llm(temperature=0.3).ainvoke(
             [
                 SystemMessage(content=RISK_ANALYZER_SYSTEM_PROMPT),
                 SystemMessage(content=context_content),
-            ] + clean_history
+            ] + clean_history,
+            config=config,
         )
         risk_report = response.content.strip()
     except Exception as exc:
@@ -341,7 +351,9 @@ def risk_analyzer_node(state: EventLogisticsState) -> EventLogisticsState:
 # ---------------------------------------------------------------------------
 
 
-async def general_agent_node(state: EventLogisticsState) -> EventLogisticsState:
+async def general_agent_node(
+    state: EventLogisticsState, config: RunnableConfig | None = None
+) -> EventLogisticsState:
     """
     A dynamic tool-calling node that answers general logistics queries
     (like distance, routing, weather lookups) using MCP tools.
@@ -367,8 +379,8 @@ async def general_agent_node(state: EventLogisticsState) -> EventLogisticsState:
     clean_history.insert(0, sys_msg)
     
     agent = create_react_agent(_llm(temperature=0.0), tools=DYNAMIC_TOOLS)
-    
-    response = await agent.ainvoke({"messages": clean_history})
+
+    response = await agent.ainvoke({"messages": clean_history}, config=config)
     final_message = response["messages"][-1].content
     
     return {
