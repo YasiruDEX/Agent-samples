@@ -1,3 +1,8 @@
+import {
+  isPlaceEvaluationPayload,
+  type PlaceEvaluationPayload,
+} from "./place-types";
+
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
@@ -24,6 +29,8 @@ type StreamOpts = SendOpts & {
   onStage?: (stage: StageEvent) => void;
   /** Called with the full accumulated text so far, plus the newly-arrived delta. */
   onToken?: (accumulatedText: string, deltaText: string) => void;
+  /** Called when the agent produced a full structured venue evaluation (a "card", not a chat reply). */
+  onPlaceEvaluation?: (evaluation: PlaceEvaluationPayload) => void;
 };
 
 /**
@@ -35,6 +42,7 @@ export async function streamChat({
   signal,
   onStage,
   onToken,
+  onPlaceEvaluation,
 }: StreamOpts): Promise<string> {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -92,6 +100,10 @@ export async function streamChat({
         onStage?.(frame.data as StageEvent);
       } else if (frame.event === "done") {
         finalText = (frame.data as { text?: string }).text ?? streamedText;
+      } else if (frame.event === "place_evaluation") {
+        if (isPlaceEvaluationPayload(frame.data)) {
+          onPlaceEvaluation?.(frame.data);
+        }
       } else if (frame.event === "error") {
         errorMessage =
           (frame.data as { message?: string }).message ?? "Agent error";

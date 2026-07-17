@@ -1,4 +1,5 @@
 import { streamChat, type ChatMessage } from "@/lib/chat-api";
+import type { PlaceEvaluationPayload } from "@/lib/place-types";
 import { useSettings } from "@/lib/settings-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { Send, Sparkles, User, Trash2 } from "@wso2/oxygen-ui-icons-react";
@@ -109,6 +110,7 @@ function ChatPage() {
     setLoading(true);
     setStageLabel(null);
     setStreamingText("");
+    let placeEvaluation: PlaceEvaluationPayload | null = null;
     try {
       const reply = await streamChat({
         apiUrl,
@@ -118,11 +120,36 @@ function ChatPage() {
         onStage: (stage) =>
           setStageLabel(stage.status === "start" ? stage.label : null),
         onToken: (accumulated) => setStreamingText(accumulated),
+        onPlaceEvaluation: (evaluation) => {
+          placeEvaluation = evaluation;
+        },
       });
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: reply || "(empty response)" },
-      ]);
+
+      if (placeEvaluation) {
+        // Full venue evaluations become a card in the Events tab, not a wall of
+        // markdown in the chat — persist it and just point the user there.
+        const evaluation: PlaceEvaluationPayload = placeEvaluation;
+        void fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ evaluation }),
+        });
+
+        const venueName =
+          evaluation.report?.venue_name || evaluation.venue_address;
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content: `I've evaluated **${venueName}** for ${evaluation.event_date}. Find the full risk report in your [Events tab](/events).`,
+          },
+        ]);
+      } else {
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: reply || "(empty response)" },
+        ]);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {

@@ -11,6 +11,7 @@
 # # ==========================================
 jwt-openai-agent/test_endpoint.py
 event-logistics-agent/ui/commands/
+event-logistics-agent/ui/.data/
 
 # ==========================================
 # Node / JavaScript Dependencies

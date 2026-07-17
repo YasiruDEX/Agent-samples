@@ -131,6 +131,8 @@ async def supervisor_router(
         "maps_data": {},
         "weather_data": {},
         "risk_analysis": "",
+        "is_place_evaluation": False,
+        "structured_report": {},
     }
 
 
@@ -286,13 +288,46 @@ async def weather_node(state: EventLogisticsState) -> EventLogisticsState:
 # ---------------------------------------------------------------------------
 
 
+def _render_report_markdown(venue_address: str, event_date: str, report: dict) -> str:
+    """Renders the structured report as markdown for chat history / non-JS clients."""
+    weather_risk = report.get("weather_risk") or {}
+    venue_logistics = report.get("venue_logistics") or {}
+
+    lines = [
+        f"### Risk Assessment Report for {report.get('venue_name') or venue_address}",
+        f"**Event date:** {event_date}  \n**Overall risk:** {str(report.get('overall_risk_level', 'n/a')).title()}",
+        "",
+        "#### Executive Summary",
+        report.get("executive_summary", ""),
+        "",
+        "#### Weather Risk",
+        weather_risk.get("summary", ""),
+        *[f"- {p}" for p in weather_risk.get("points", [])],
+        "",
+        "#### Venue & Logistics",
+        venue_logistics.get("summary", ""),
+        *[f"- {p}" for p in venue_logistics.get("points", [])],
+        "",
+        "#### Critical Failure Points",
+        *[f"- {p}" for p in report.get("critical_failure_points", [])],
+        "",
+        "#### Contingency Plan",
+        *[f"- {p}" for p in report.get("contingency_plan", [])],
+        "",
+        "#### Weather Windows",
+        *[f"- {p}" for p in report.get("weather_windows", [])],
+    ]
+    return "\n".join(line for line in lines if line is not None)
+
+
 async def risk_analyzer_node(
     state: EventLogisticsState, config: RunnableConfig | None = None
 ) -> EventLogisticsState:
     """
     Pure LLM reasoning node — no external tools.
-    Synthesises maps_data + weather_data into a detailed risk report.
-    Writes the narrative to risk_analysis.
+    Synthesises maps_data + weather_data into either a full structured risk report
+    (is_place_evaluation=True, card-ready data in structured_report) or a plain
+    chat reply (follow-up answers, greetings, missing venue/date).
     """
     logger.info("[risk_analyzer_node] Entering node.")
 
@@ -306,12 +341,12 @@ async def risk_analyzer_node(
     for m in state["messages"]:
         if isinstance(m, AIMessage):
             content = m.content
-            if (content.startswith("Supervisor parsed:") or 
-                content.startswith("Maps analysis complete") or 
-                content.startswith("Weather data retrieved") or 
-                "Maps agent error" in content or 
+            if (content.startswith("Supervisor parsed:") or
+                content.startswith("Maps analysis complete") or
+                content.startswith("Weather data retrieved") or
+                "Maps agent error" in content or
                 "Weather agent error" in content or
-                content.startswith("Weather Error:") or 
+                content.startswith("Weather Error:") or
                 content.startswith("Maps Error:")):
                 continue
         clean_history.append(m)
@@ -333,16 +368,35 @@ async def risk_analyzer_node(
             ] + clean_history,
             config=config,
         )
-        risk_report = response.content.strip()
+        parsed = json.loads(_strip_markdown_fences(response.content))
     except Exception as exc:
         logger.exception("[risk_analyzer_node] LLM error: %s", exc)
-        risk_report = f"Risk analysis failed due to LLM error: {exc}"
+        error_text = f"Risk analysis failed due to an error: {exc}"
+        return {
+            "messages": [AIMessage(content=error_text)],
+            "risk_analysis": error_text,
+            "is_place_evaluation": False,
+            "structured_report": {},
+        }
 
-    logger.info("[risk_analyzer_node] Report generated (%d chars).", len(risk_report))
+    if parsed.get("mode") == "full_report" and isinstance(parsed.get("report"), dict):
+        report = parsed["report"]
+        chat_text = _render_report_markdown(venue_address, event_date, report)
+        logger.info("[risk_analyzer_node] Full structured report generated for %r.", venue_address)
+        return {
+            "messages": [AIMessage(content=chat_text)],
+            "risk_analysis": chat_text,
+            "is_place_evaluation": True,
+            "structured_report": report,
+        }
 
+    chat_text = parsed.get("text") or "I need a bit more information to help with that."
+    logger.info("[risk_analyzer_node] Chat reply generated (%d chars).", len(chat_text))
     return {
-        "messages": [AIMessage(content=risk_report)],
-        "risk_analysis": risk_report,
+        "messages": [AIMessage(content=chat_text)],
+        "risk_analysis": chat_text,
+        "is_place_evaluation": False,
+        "structured_report": {},
     }
 
 

@@ -86,8 +86,19 @@ class ChatRequest(BaseModel):
     stream: bool = False
 
 
+class PlaceEvaluation(BaseModel):
+    venue_address: str
+    event_date: str
+    resolved_lat: float | None = None
+    resolved_lon: float | None = None
+    maps_data: dict[str, Any] = {}
+    weather_data: dict[str, Any] = {}
+    report: dict[str, Any] = {}
+
+
 class ChatResponse(BaseModel):
     response: str
+    place_evaluation: PlaceEvaluation | None = None
 
 
 
@@ -245,17 +256,17 @@ NODE_LABELS: dict[str, str] = {
     "general_agent_node": "Answering your question…",
 }
 
-# Nodes whose LLM output is the user-facing answer — their tokens are forwarded
-# to the client as they're generated. Other nodes only produce internal
-# JSON/routing artifacts, so their tokens are not streamed.
-#
-# general_agent_node delegates to a nested create_react_agent sub-graph, so its
+# general_agent_node's replies are plain user-facing prose, so its tokens are
+# streamed live. It delegates to a nested create_react_agent sub-graph, so its
 # real token stream surfaces under a namespaced sub-run (e.g. "general_agent_node:<id>")
 # rather than under the top-level "general_agent_node" name — the top-level name only
 # ever emits one aggregated echo chunk at the end, which would double the output if streamed.
+#
+# risk_analyzer_node's raw output is a JSON envelope (see agent/prompts.py), not
+# user-facing prose, so it is intentionally NOT token-streamed — its result is
+# surfaced via the "place_evaluation" event (full report) or the "done" event
+# (chat_reply) once the node finishes.
 def _text_stream_key(namespace: tuple[str, ...], node: str | None) -> str | None:
-    if not namespace and node == "risk_analyzer_node":
-        return "risk_analyzer_node"
     if namespace and namespace[0].startswith("general_agent_node:"):
         return "general_agent_node"
     return None
@@ -286,6 +297,22 @@ def _initial_state(langchain_messages: list[Any]) -> dict[str, Any]:
         "maps_data": {},
         "weather_data": {},
         "risk_analysis": "",
+        "is_place_evaluation": False,
+        "structured_report": {},
+    }
+
+
+def _place_evaluation_from_state(state: dict[str, Any]) -> dict[str, Any] | None:
+    if not state.get("is_place_evaluation"):
+        return None
+    return {
+        "venue_address": state.get("venue_address", ""),
+        "event_date": state.get("event_date", ""),
+        "resolved_lat": state.get("resolved_lat"),
+        "resolved_lon": state.get("resolved_lon"),
+        "maps_data": state.get("maps_data", {}),
+        "weather_data": state.get("weather_data", {}),
+        "report": state.get("structured_report", {}),
     }
 
 
@@ -309,6 +336,7 @@ async def _stream_chat(langchain_messages: list[Any]) -> AsyncIterator[str]:
     graph = build_graph()
     streamed_text = ""
     final_text = ""
+    state_acc: dict[str, Any] = {}
     try:
         yield _sse(
             "stage",
@@ -335,8 +363,13 @@ async def _stream_chat(langchain_messages: list[Any]) -> AsyncIterator[str]:
                 continue
 
             for node_name, delta in payload.items():
+                state_acc.update(delta)
+
                 if node_name == "risk_analyzer_node":
                     final_text = delta.get("risk_analysis") or final_text
+                    place_evaluation = _place_evaluation_from_state(state_acc)
+                    if place_evaluation:
+                        yield _sse("place_evaluation", place_evaluation)
                 elif node_name == "general_agent_node":
                     node_messages = delta.get("messages") or []
                     if node_messages and getattr(node_messages[-1], "content", None):
@@ -425,7 +458,8 @@ async def chat(request: ChatRequest, http_request: Request):
         "",
     )
 
-    return ChatResponse(response=full_report)
+    place_evaluation = _place_evaluation_from_state(final_state)
+    return ChatResponse(response=full_report, place_evaluation=place_evaluation)
 
 
 @app.get("/health", summary="Health check")

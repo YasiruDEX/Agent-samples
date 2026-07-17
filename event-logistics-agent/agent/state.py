@@ -37,4 +37,6 @@ class EventLogisticsState(TypedDict):
     resolved_lon: Optional[float]
     maps_data: dict              # hotel density, accessibility, parking
     weather_data: dict           # OpenWeather 4.0 parsed payload
-    risk_analysis: str           # synthesised narrative outcome
+    risk_analysis: str           # synthesised narrative outcome (human-readable)
+    is_place_evaluation: bool    # True when risk_analyzer_node produced a full structured report
+    structured_report: dict      # card-ready risk report (see prompts.RISK_ANALYZER_SYSTEM_PROMPT)
