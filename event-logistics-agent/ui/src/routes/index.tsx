@@ -1,9 +1,10 @@
 import { streamChat, type ChatMessage } from "@/lib/chat-api";
 import type { PlaceEvaluationPayload } from "@/lib/place-types";
 import { useSettings } from "@/lib/settings-context";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Send, Sparkles, User, Trash2 } from "@wso2/oxygen-ui-icons-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   Box,
   Button,
@@ -62,6 +63,7 @@ export const Route = createFileRoute("/")({
 
 function ChatPage() {
   const { apiUrl, apiKey, apiHeader } = useSettings();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [input, setInput] = useState("");
@@ -129,11 +131,28 @@ function ChatPage() {
         // Full venue evaluations are shown in chat AND saved as a card in the
         // Events tab, so the user gets both without asking twice.
         const evaluation: PlaceEvaluationPayload = placeEvaluation;
-        void fetch("/api/events", {
+        const venueName =
+          evaluation.report?.venue_name || evaluation.venue_address;
+        fetch("/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ evaluation }),
-        });
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`Request failed (${res.status})`);
+            toast.success(`Saved "${venueName}" to Events`, {
+              description: evaluation.event_date,
+              action: {
+                label: "View",
+                onClick: () => navigate({ to: "/events" }),
+              },
+            });
+          })
+          .catch(() => {
+            toast.error(
+              `Evaluated "${venueName}", but saving it to Events failed.`,
+            );
+          });
 
         setMessages((m) => [
           ...m,
