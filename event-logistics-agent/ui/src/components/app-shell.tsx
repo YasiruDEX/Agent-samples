@@ -75,16 +75,16 @@ export function AppShell() {
         >
           <img
             src="/favicon.svg"
-            alt="Agent Manager Logo"
+            alt="Event Logistics Agent Logo"
             width={32}
             height={32}
           />
           <Box>
             <Typography variant="body2" fontWeight="bold" noWrap>
-              Agent Testing
+              Event Logistics Agent
             </Typography>
             <Typography variant="caption" color="text.secondary" noWrap>
-              validation dashboard
+              Venue risk assessment
             </Typography>
           </Box>
         </Stack>
@@ -179,12 +179,12 @@ export function AppShell() {
           >
             <img
               src="/favicon.svg"
-              alt="Agent Manager Logo"
+              alt="Event Logistics Agent Logo"
               width={28}
               height={28}
             />
             <Typography variant="body2" fontWeight="bold">
-              Agent Tester
+              Event Logistics Agent
             </Typography>
           </Stack>
 
@@ -211,7 +211,7 @@ export function AppShell() {
               fontWeight: "bold",
             }}
           >
-            A
+            E
           </Avatar>
         </Box>
 

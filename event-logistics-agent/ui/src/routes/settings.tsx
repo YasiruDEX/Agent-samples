@@ -19,10 +19,11 @@ import {
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings · Agent Testing Workspace" },
+      { title: "Settings · Event Logistics Agent" },
       {
         name: "description",
-        content: "Configure your agent API endpoint, key, and request header.",
+        content:
+          "Configure Event Logistics Agent's API endpoint, key, and request header.",
       },
     ],
   }),
@@ -30,7 +31,8 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
-  const { apiUrl, apiKey, apiHeader, updateSettings, reset, defaults } = useSettings();
+  const { apiUrl, apiKey, apiHeader, updateSettings, reset, defaults } =
+    useSettings();
   const [url, setUrl] = useState(apiUrl);
   const [key, setKey] = useState(apiKey);
   const [header, setHeader] = useState(apiHeader);
@@ -89,7 +91,11 @@ function SettingsPage() {
         setTimeout(() => setSaved(false), 1500);
       }, 3000);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save settings");
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save settings",
+      );
     } finally {
       setSaving(false);
     }
@@ -102,8 +108,9 @@ function SettingsPage() {
           Settings
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-          Override the agent endpoint, API key, and request header name. Values are saved to the
-          local .env file and take precedence over any runtime defaults.
+          Override the agent endpoint, API key, and request header name. Values
+          are saved to the local .env file and take precedence over any runtime
+          defaults.
         </Typography>
 
         <form onSubmit={save}>
@@ -119,7 +126,7 @@ function SettingsPage() {
                   placeholder="https://your-agent.example.com/v1/chat"
                   fullWidth
                 />
-                
+
                 <TextField
                   label="API Key"
                   helperText="Sent using the request header name below. If the header is Authorization, it becomes 'Bearer <key>'."
@@ -163,7 +170,11 @@ function SettingsPage() {
                     borderColor: "divider",
                   }}
                 >
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight="bold"
+                    gutterBottom
+                  >
                     Outgoing request header preview
                   </Typography>
                   <Typography variant="caption" fontFamily="monospace">
@@ -185,7 +196,8 @@ function SettingsPage() {
                     disabled={saving}
                     startIcon={saved ? <Check /> : null}
                     sx={{
-                      background: "linear-gradient(90deg, #ff5e3a 0%, #ff2a6d 100%)",
+                      background:
+                        "linear-gradient(90deg, #ff5e3a 0%, #ff2a6d 100%)",
                       color: "white",
                       "&:disabled": {
                         opacity: 0.7,
@@ -204,12 +216,16 @@ function SettingsPage() {
                       setSaving(true);
                       setError(null);
                       try {
-                        const response = await fetch("/api/settings", { method: "DELETE" });
+                        const response = await fetch("/api/settings", {
+                          method: "DELETE",
+                        });
                         if (!response.ok) {
                           throw new Error(await response.text());
                         }
 
-                        const data = (await response.json()) as { settings?: SavedSettings };
+                        const data = (await response.json()) as {
+                          settings?: SavedSettings;
+                        };
                         const resetSettings = data.settings ?? {
                           apiUrl: defaults.apiUrl,
                           apiKey: defaults.apiKey,
@@ -229,7 +245,9 @@ function SettingsPage() {
                         }, 3000);
                       } catch (resetError) {
                         setError(
-                          resetError instanceof Error ? resetError.message : "Failed to reset settings",
+                          resetError instanceof Error
+                            ? resetError.message
+                            : "Failed to reset settings",
                         );
                       } finally {
                         setSaving(false);
@@ -244,14 +262,24 @@ function SettingsPage() {
           </Card>
         </form>
 
-        <Card variant="outlined" sx={{ borderRadius: 2, bgcolor: "action.hover" }}>
+        <Card
+          variant="outlined"
+          sx={{ borderRadius: 2, bgcolor: "action.hover" }}
+        >
           <CardContent sx={{ p: 3 }}>
             <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
               Local .env values
             </Typography>
-            <Typography variant="body2" component="div" fontFamily="monospace" color="text.secondary">
+            <Typography
+              variant="body2"
+              component="div"
+              fontFamily="monospace"
+              color="text.secondary"
+            >
               <div>AGENT_URL = {defaults.apiUrl || "(unset)"}</div>
-              <div>AGENT_API_KEY = {defaults.apiKey ? "••••••" : "(unset)"}</div>
+              <div>
+                AGENT_API_KEY = {defaults.apiKey ? "••••••" : "(unset)"}
+              </div>
               <div>AGENT_API_HEADER = {defaults.apiHeader || "(unset)"}</div>
             </Typography>
           </CardContent>
@@ -293,7 +321,10 @@ function SettingsPage() {
           <Typography variant="h6" fontWeight="bold" sx={{ color: "white" }}>
             Restarting application...
           </Typography>
-          <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mt: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{ color: "rgba(255, 255, 255, 0.7)", mt: 1 }}
+          >
             Applying settings and reloading backend services.
           </Typography>
         </Box>

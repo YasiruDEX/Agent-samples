@@ -51,10 +51,11 @@ function isChatMessage(value: unknown): value is ChatMessage {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Conversation · Agent Testing Workspace" },
+      { title: "Chat · Event Logistics Agent" },
       {
         name: "description",
-        content: "Talk to your AI agent from a clean, focused chat interface.",
+        content:
+          "Chat with the Event Logistics Agent about venue risk, weather, and event logistics.",
       },
     ],
   }),
@@ -274,7 +275,7 @@ function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Message your agent…"
+              placeholder="Message the Event Logistics Agent…"
               multiline
               maxRows={5}
               fullWidth
@@ -349,8 +350,8 @@ function EmptyState() {
         How can I help today?
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Start a conversation with your agent. Configure the endpoint and API key
-        from{" "}
+        Start a conversation with the Event Logistics Agent. Configure the
+        endpoint and API key from{" "}
         <Typography
           component="span"
           variant="body2"

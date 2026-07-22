@@ -44,7 +44,7 @@ import {
 export const Route = createFileRoute("/events")({
   head: () => ({
     meta: [
-      { title: "Events · Agent Testing Workspace" },
+      { title: "Events · Event Logistics Agent" },
       {
         name: "description",
         content:

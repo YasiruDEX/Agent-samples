@@ -14,7 +14,7 @@ export function SplashScreen({ visible }: { visible: boolean }) {
           <Sparkles className="h-10 w-10 text-white" />
         </div>
         <div className="mt-6 text-lg font-semibold tracking-tight text-foreground">
-          Agent Testing Workspace
+          Event Logistics Agent
         </div>
         <div className="mt-3 flex gap-1.5">
           <span className="h-2 w-2 animate-bounce rounded-full bg-white/90" />

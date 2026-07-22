@@ -82,29 +82,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       meta: [
         { charSet: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { title: "Agent Testing Workspace" },
+        { title: "Event Logistics Agent" },
         {
           name: "description",
           content:
-            "Validate and chat with your AI agent in a focused, professional workspace.",
+            "Event Logistics Agent assesses outdoor event & wedding venues for weather, logistics, and risk — powered by AI.",
         },
         { name: "author", content: "WSO2" },
-        { name: "application-name", content: "Agent Testing Workspace" },
+        { name: "application-name", content: "Event Logistics Agent" },
         { name: "theme-color", content: "#0f172a" },
-        { property: "og:title", content: "Agent Testing Workspace" },
+        { property: "og:title", content: "Event Logistics Agent" },
         {
           property: "og:description",
           content:
-            "Validate and chat with your AI agent in a focused, professional workspace.",
+            "Event Logistics Agent assesses outdoor event & wedding venues for weather, logistics, and risk — powered by AI.",
         },
-        { property: "og:site_name", content: "Agent Testing Workspace" },
+        { property: "og:site_name", content: "Event Logistics Agent" },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary" },
-        { name: "twitter:title", content: "Agent Testing Workspace" },
+        { name: "twitter:title", content: "Event Logistics Agent" },
         {
           name: "twitter:description",
           content:
-            "Validate and chat with your AI agent in a focused, professional workspace.",
+            "Event Logistics Agent assesses outdoor event & wedding venues for weather, logistics, and risk — powered by AI.",
         },
       ],
       links: [
